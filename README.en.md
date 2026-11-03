@@ -20,7 +20,7 @@ AI is included by default and assembled explicitly; copied projects can remove t
 
 ## Local development
 
-Use Python 3.12+, `uv`, Node.js 20.19+, and the pnpm version declared in `frontend/package.json` through Corepack. Prepare MySQL or PostgreSQL and Redis. Both are officially supported runtime databases; SQLite is reserved for automated tests and isolated acceptance runs. See the [architecture guide](docs/ARCHITECTURE_AND_DEVELOPMENT.md).
+Use Python 3.12+, `uv`, Node.js 22.22.2+ (22.x), 24.15+ (24.x), or 26+, and the pnpm version declared in `frontend/package.json` through Corepack. Prepare MySQL or PostgreSQL and Redis. Both are officially supported runtime databases; SQLite is reserved for automated tests and isolated acceptance runs. See the [architecture guide](docs/ARCHITECTURE_AND_DEVELOPMENT.md).
 
 ```bash
 git clone git@github.com:kaliluying/fastcore.git
@@ -48,7 +48,7 @@ Development and production startup both migrate, initialize and validate the sel
 
 ## Development and maintenance
 
-Start new business modules with the [module template](docs/STANDARD_MODULE_TEMPLATE.md). Use the [architecture guide](docs/ARCHITECTURE_AND_DEVELOPMENT.md) for call chains and the [testing guide](docs/TESTING.md) for commands and acceptance boundaries. `main` is the default and current delivery branch. Detailed documentation is maintained primarily in Chinese.
+New business modules can start from the [module generator](docs/MODULE_GENERATOR.md) or the [module template](docs/STANDARD_MODULE_TEMPLATE.md). Use the [architecture guide](docs/ARCHITECTURE_AND_DEVELOPMENT.md) for call chains and the [testing guide](docs/TESTING.md) for commands and acceptance boundaries. `main` is the default and current delivery branch. Detailed documentation is maintained primarily in Chinese.
 
 All project identifiers use FastCore: the default database is `fastcore`, Redis brand prefixes are `fastcore:` / `fastcore-cache:`, logs use `backend/logs/fastcore.log`, the CLI object is `fastcore_cli`, and design documentation lives in `design-system/fastcore-quiet-operations/`. The local directory is named `FastCore`. Existing installations must back up and migrate their database and update environment settings before activating the new version; old brand aliases are not retained.
 
