@@ -6,14 +6,19 @@ const ts = require("typescript");
 const { test } = require("node:test");
 
 const source = fs.readFileSync(
-  path.join(__dirname, "../src/views/module_platform/menu/index.vue"),
+  path.join(__dirname, "../src/views/module_platform/menu/composables/useMenuManagement.ts"),
   "utf8"
 );
-const script = source.match(/<script setup lang="ts">([\s\S]*?)<\/script>/)[1];
-const ast = ts.createSourceFile("menu.ts", script, ts.ScriptTarget.Latest, true);
-const submit = ast.statements.find(
-  (node) => ts.isFunctionDeclaration(node) && node.name?.text === "handleSubmit"
-);
+const ast = ts.createSourceFile("useMenuManagement.ts", source, ts.ScriptTarget.Latest, true);
+let submit;
+function findSubmit(node) {
+  if (ts.isFunctionDeclaration(node) && node.name?.text === "handleSubmit") {
+    submit = node;
+    return;
+  }
+  ts.forEachChild(node, findSubmit);
+}
+findSubmit(ast);
 const code = ts.transpileModule(submit.getText(ast), {
   compilerOptions: { target: ts.ScriptTarget.ES2022 },
 }).outputText;
