@@ -57,7 +57,7 @@ def configured_chat(monkeypatch):
 
 
 @pytest.fixture(scope="module")
-def websocket_scope_data(ai_client):
+def chat_scope_data(ai_client):
     assert settings.DATABASE_TYPE == "sqlite"
 
     async def seed():
@@ -313,11 +313,11 @@ def test_authenticated_attachment_stream_and_history_flow(ai_client, configured_
 
 
 @pytest.mark.parametrize("scenario", ["cross_user_denied", "own_allowed", "superuser_allowed"])
-def test_real_chat_auth_enforces_knowledge_creator_scope(ai_client, websocket_scope_data, configured_chat, monkeypatch, scenario):
+def test_real_chat_auth_enforces_knowledge_creator_scope(ai_client, chat_scope_data, configured_chat, monkeypatch, scenario):
     searched_ids = []
     prompts = []
     derived_auth = []
-    base = websocket_scope_data["own" if scenario == "own_allowed" else "foreign"]
+    base = chat_scope_data["own" if scenario == "own_allowed" else "foreign"]
 
     class Search:
         def __init__(self, database):
@@ -348,7 +348,7 @@ def test_real_chat_auth_enforces_knowledge_creator_scope(ai_client, websocket_sc
         return RagChatChain(retriever=retriever, prompt_builder=RagPromptBuilder(), chat_model=Model(), db=db)
 
     monkeypatch.setattr(service, "create_rag_chain", create_chain)
-    username = "admin" if scenario == "superuser_allowed" else websocket_scope_data["username"]
+    username = "admin" if scenario == "superuser_allowed" else chat_scope_data["username"]
     password = "admin123" if scenario == "superuser_allowed" else "isolated-scope-password"
     login = ai_client.post("/system/auth/login", data={"username": username, "password": password})
     assert login.status_code == 200

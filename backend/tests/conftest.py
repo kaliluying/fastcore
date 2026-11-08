@@ -178,7 +178,7 @@ patch("app.init_app.FastAPILimiter.init", new=AsyncMock()).start()
 patch("app.init_app.FastAPILimiter.close", new=AsyncMock()).start()
 
 # RateLimiter → no-op（需匹配 FastAPI 依赖注入签名）
-from fastapi_limiter.depends import RateLimiter, WebSocketRateLimiter
+from fastapi_limiter.depends import RateLimiter
 from starlette.requests import Request
 from starlette.responses import Response
 
@@ -188,7 +188,6 @@ async def _noop_rate_limit(request: Request, response: Response) -> None:
 
 
 RateLimiter.__call__ = _noop_rate_limit
-WebSocketRateLimiter.__call__ = _noop_rate_limit
 
 # ============================================================
 # 精简 lifespan — 仅做数据库初始化

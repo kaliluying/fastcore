@@ -11,7 +11,7 @@ from .runtime_logs import RuntimeLogQuerySchema
 
 
 class ChatQuerySchema(BaseModel):
-    """SSE 与旧版 WebSocket 共用的流式聊天请求。"""
+    """SSE 流式聊天请求。"""
 
     message: str = Field(..., min_length=1, max_length=8_000, description="Message content")
     session_id: str | None = Field(None, description="Session ID")
