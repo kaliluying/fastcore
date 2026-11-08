@@ -142,9 +142,6 @@ class UserService:
             raise CustomException(msg="该数据不存在")
         user = await UserCRUD(self.auth).get(id=self.auth.user.id)
         user_dict = UserOutSchema.model_validate(user)
-        dept = getattr(user, "dept", None)
-        if dept:
-            user_dict.dept_name = dept.name
         if self.auth.user and self.auth.user.is_superuser:
             menu_all = await MenuCRUD(self.auth).tree_list(
                 search={"type": ("in", [1, 2, 3, 4]), "status": 0},

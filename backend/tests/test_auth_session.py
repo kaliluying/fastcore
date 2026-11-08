@@ -240,37 +240,6 @@ async def test_failed_logins_escalate_to_captcha_and_account_lock(monkeypatch) -
 
 
 @pytest.mark.asyncio
-async def test_websocket_ticket_is_single_use(monkeypatch) -> None:
-    """A consumed WebSocket ticket must not authenticate a second connection."""
-    session_id = "session-for-ws-test"
-    redis = FakeRedis()
-    redis.values[f"{RedisInitKeyConfig.ACCESS_TOKEN.key}:{session_id}"] = b"online"
-    redis.values[f"{RedisInitKeyConfig.USER_SESSION.key}:{session_id}"] = json.dumps(
-        {"user_id": 7, "user_name": "admin", "session_id": session_id, "credential_fingerprint": credential_fingerprint(7, "fixture")}
-    ).encode("utf-8")
-    ticket = await LoginService.create_ws_ticket(redis=redis, session_id=session_id)
-
-    async def load_user(_db, *, user_id):
-        assert user_id == 7
-        return SimpleNamespace(id=7, username="admin", password="fixture", status=0)
-
-    monkeypatch.setattr(dependencies, "_load_user_from_db", load_user)
-    from sqlalchemy.ext.asyncio import AsyncSession
-    monkeypatch.setattr(dependencies, "async_db_session", lambda: AsyncSession())
-
-    db = AsyncSession()
-    first = await dependencies._verify_ws_ticket(ticket, db, redis)
-
-    assert first.user.username == "admin"
-    assert first.session_id == session_id
-    assert "session_id" not in first.model_dump()
-    with pytest.raises(CustomException) as replay_error:
-        await dependencies._verify_ws_ticket(ticket, db, redis)
-    assert replay_error.value.status_code == 401
-    await db.close()
-
-
-@pytest.mark.asyncio
 async def test_oauth_ticket_is_single_use() -> None:
     """OAuth redirects expose an opaque ticket that can be exchanged once."""
     redis = FakeRedis()

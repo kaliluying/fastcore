@@ -497,19 +497,3 @@ def test_log_status_requires_login_and_is_enabled_for_superuser(ai_client, auth_
     response = ai_client.get("/ai/chat/runtime-logs/status", headers=auth_headers)
     assert response.status_code == 200
     assert response.json()["data"] == {"can_query": True, "enabled": True}
-
-
-def test_open_websocket_cannot_query_logs_after_logout(ai_client, auth_headers, monkeypatch):
-    reader = AsyncMock(side_effect=AssertionError("Logged-out socket must not read logs"))
-    monkeypatch.setattr(service, "query_runtime_logs", reader)
-    ticket_response = ai_client.post("/system/auth/ws-ticket", headers=auth_headers)
-    assert ticket_response.status_code == 200
-    ticket = ticket_response.json()["data"]["ticket"]
-    with ai_client.websocket_connect(f"/ai/chat/ws?ticket={ticket}") as socket:
-        assert ai_client.post("/system/auth/logout", headers=auth_headers).status_code == 200
-        socket.send_json({"message": "查询运行日志", "request_id": "after-logout", "log_query": {}})
-        response = socket.receive_json()
-    assert response["type"] == "error"
-    assert response["request_id"] == "after-logout"
-    assert "失效" in response["message"]
-    reader.assert_not_called()

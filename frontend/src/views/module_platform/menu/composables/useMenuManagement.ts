@@ -357,13 +357,8 @@ export function useMenuManagement() {
       ElMessage.warning("请先选择要操作的数据");
       return;
     }
-    ElMessageBox.confirm(`确认${status === 0 ? "启用" : "停用"}该项数据?`, "警告", {
-      confirmButtonText: "确定",
-      cancelButtonText: "取消",
-      type: "warning",
-    });
     try {
-      await ElMessageBox.confirm("确认启用或停用该项数据?", "警告", {
+      await ElMessageBox.confirm(`确认${status === 0 ? "启用" : "停用"}该项数据?`, "警告", {
         confirmButtonText: "确定",
         cancelButtonText: "取消",
         type: "warning",

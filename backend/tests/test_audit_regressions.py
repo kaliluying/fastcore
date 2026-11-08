@@ -1,7 +1,6 @@
 """Exercise the audit defects through real persistence and request boundaries."""
 
 import asyncio
-import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -13,7 +12,6 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.api.v1.module_platform.menu.model import MenuModel
 from app.api.v1.module_system.auth import oauth_service
-from app.api.v1.module_system.auth.service import LoginService
 from app.api.v1.module_system.role.model import RoleModel
 from app.api.v1.module_system.role.service import RoleService
 from app.api.v1.module_system.user.model import UserModel, UserRolesModel
@@ -22,11 +20,10 @@ from app.core import dependencies, router_class
 from app.core.base_model import MappedBase
 from app.core.base_schema import AuthSchema
 from app.core.exceptions import CustomException
-from app.core.http_limit import http_limit_callback, ws_limit_callback
+from app.core.http_limit import http_limit_callback
 from app.core.permission import Permission
 from app.core.redis_crud import RedisCURD
 from app.core.security import credential_fingerprint
-from app.plugin.module_ai.chat import ws
 from app.plugin.module_ai.chat.crud import ChatSessionCRUD
 from app.plugin.module_ai.chat.schema import ChatSessionCreateSchema
 from app.plugin.module_ai.knowledge.bm25_index import BM25KnowledgeIndex
@@ -119,9 +116,6 @@ async def test_rate_limit_wait_is_in_seconds(milliseconds, seconds):
     with pytest.raises(CustomException) as exc:
         http_limit_callback(None, None, milliseconds)
     assert exc.value.data["Retry-After"] == str(seconds)
-    socket = SimpleNamespace(close=AsyncMock())
-    await ws_limit_callback(socket, milliseconds)
-    assert socket.close.await_args.kwargs["reason"].endswith(f"{seconds} 秒后重试")
 
 
 async def test_concurrent_chat_appends_keep_both_answers(audit_sessions):
@@ -206,62 +200,6 @@ async def test_permission_revocation_cannot_repopulate_stale_cache(audit_session
     async with audit_sessions() as reader:
         after = await dependencies._verify_session(session_id, reader, redis)
         assert after.permission_map == {}
-
-
-@pytest.mark.parametrize("revoke", ["logout", "user", "role", "menu"])
-async def test_open_websocket_rechecks_authorization(audit_sessions, monkeypatch, revoke):
-    user_id, role_id, menu_id = await seed_user(audit_sessions)
-    redis = FakeRedis()
-    session_id = await online_session(redis, user_id)
-    ticket = await LoginService.create_ws_ticket(redis, session_id)
-    invoked = []
-
-    async def chat_query(self, query, **kwargs):
-        invoked.append(query.message)
-        yield {"type": "done"}
-
-    class Socket:
-        app = SimpleNamespace(state=SimpleNamespace(redis=redis))
-        query_params = {"ticket": ticket}
-        client = "audit"
-
-        def __init__(self):
-            self.accepted = False
-            self.sent = []
-            self.closed = asyncio.Event()
-            self.received = False
-
-        async def accept(self):
-            self.accepted = True
-
-        async def close(self, **kwargs):
-            self.closed.set()
-
-        async def receive_text(self):
-            if self.received:
-                await asyncio.wait_for(self.closed.wait(), 5)
-                raise RuntimeError("test disconnect")
-            self.received = True
-            if revoke == "logout":
-                await LoginService.logout(redis, session_id)
-            else:
-                model, identity = {"user": (UserModel, user_id), "role": (RoleModel, role_id), "menu": (MenuModel, menu_id)}[revoke]
-                async with audit_sessions() as db:
-                    obj = await db.get(model, identity)
-                    obj.status = 1
-                    await db.commit()
-            return json.dumps({"message": "after revocation", "request_id": "audit"})
-
-        async def send_text(self, text):
-            self.sent.append(json.loads(text))
-
-    monkeypatch.setattr(ws, "async_db_session", audit_sessions)
-    monkeypatch.setattr(ws.ChatService, "chat_query", chat_query)
-    socket = Socket()
-    await ws.websocket_chat_controller(socket)
-    assert socket.accepted and socket.closed.is_set()
-    assert invoked == []
-    assert [event["type"] for event in socket.sent] == ["error"]
 
 
 @pytest.mark.parametrize("provider", ["github", "gitee", "wechat", "qq"])

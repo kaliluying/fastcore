@@ -90,7 +90,6 @@ class Settings(BaseSettings):
     FUTURE: bool = True  # 是否使用SQLAlchemy 2.0特性
     AUTOCOMMIT: bool = False  # 是否自动提交（映射 SQLAlchemy sessionmaker(autocommit=...)）
     AUTOFLUSH: bool = False  # 是否自动刷新（映射 SQLAlchemy sessionmaker(autoflush=...)）
-    AUTOFETCH: bool | None = None  # 兼容旧环境变量名（保留别名，避免 .env 中已有 AUTOFETCH 的部署报错）
     EXPIRE_ON_COMMIT: bool = False  # 是否在提交时过期
 
     # MySQL/PostgreSQL 用于正式运行；SQLite 仅供自动化测试使用

@@ -26,7 +26,6 @@ routers = [
   "memory.controller:MemoryRouter",
   "quality.controller:QualityRouter",
 ]
-websocket_routers = ["chat.ws:WS_AI"]
 model_modules = ["agent.model", "chat.model", "chat.usage_model", "knowledge.model", "memory.model", "quality.model"]
 startup_hooks = [
   "chat.model_config_service:initialize_runtime_chat_model_config",

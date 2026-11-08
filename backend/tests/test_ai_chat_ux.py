@@ -1,6 +1,4 @@
-import asyncio
 import json
-from contextlib import asynccontextmanager, suppress
 from io import BytesIO
 from pathlib import Path
 from types import SimpleNamespace
@@ -24,7 +22,7 @@ from app.api.v1.module_system.user.model import UserModel, UserRolesModel
 from app.config.setting import settings
 from app.core.database import async_db_session
 from app.core.exceptions import CustomException
-from app.plugin.module_ai.chat import service, ws
+from app.plugin.module_ai.chat import service
 from app.plugin.module_ai.chat.crud import ChatSession, ChatSessionCRUD
 from app.plugin.module_ai.chat.hybrid_retriever import KnowledgeBaseChatRetriever
 from app.plugin.module_ai.chat.model import ChatSessionModel, MemoryExtractionJobModel
@@ -106,75 +104,6 @@ def websocket_scope_data(ai_client):
                 await database.commit()
 
         ai_client.portal.call(cleanup)
-
-
-class QueueWebSocket:
-    query_params = {"ticket": "test-ticket"}
-    client = "isolated-test"
-
-    def __init__(self):
-        self.incoming = asyncio.Queue()
-        self.outgoing = asyncio.Queue()
-        self.accepted = False
-
-    async def accept(self):
-        self.accepted = True
-
-    async def receive_text(self):
-        message = await self.incoming.get()
-        if message is None:
-            raise RuntimeError("test disconnect")
-        return json.dumps(message, ensure_ascii=False)
-
-    async def send_text(self, message):
-        await self.outgoing.put(message)
-
-    async def send(self, message):
-        await self.incoming.put(message)
-
-    async def event(self):
-        return json.loads(await asyncio.wait_for(self.outgoing.get(), timeout=2))
-
-
-@asynccontextmanager
-async def running_socket(monkeypatch, chat_query):
-    opened = []
-    exited = []
-    auth = SimpleNamespace(user=SimpleNamespace(id=1, username="admin", is_superuser=True))
-
-    @asynccontextmanager
-    async def database_session():
-        database = SimpleNamespace(rollback=AsyncMock())
-        opened.append(database)
-        try:
-            yield database
-        finally:
-            await database.rollback()
-            exited.append(database)
-
-    monkeypatch.setattr(ws, "async_db_session", database_session)
-    monkeypatch.setattr(ws, "_resolve_ws_auth", AsyncMock(return_value=auth))
-
-    async def verify_session(session_id, db, redis):
-        return SimpleNamespace(user=auth.user, db=db, model_copy=lambda **kwargs: SimpleNamespace(user=auth.user, db=db))
-
-    auth.session_id = "socket-fixture"
-    auth.redis = None
-    monkeypatch.setattr(ws, "_verify_session", verify_session)
-    monkeypatch.setattr(ws.ChatService, "chat_query", chat_query)
-    websocket = QueueWebSocket()
-    task = asyncio.create_task(ws.websocket_chat_controller(websocket))
-    try:
-        yield websocket, opened, exited
-    finally:
-        await websocket.incoming.put(None)
-        try:
-            await asyncio.wait_for(task, timeout=2)
-        finally:
-            if not task.done():
-                task.cancel()
-                with suppress(asyncio.CancelledError):
-                    await task
 
 
 async def test_structured_query_streams_real_rag_and_persists_citations(chat_auth, configured_chat, monkeypatch):
@@ -344,113 +273,7 @@ async def test_five_long_attachments_only_cite_the_context_actually_given_to_mod
         assert file["content"][:20] not in context
 
 
-async def test_websocket_adds_request_id_to_all_structured_events(monkeypatch):
-    events = [
-        {"type": "stage", "stage": "retrieving"},
-        {"type": "citations", "citations": [{"id": "1", "title": "文档", "snippet": "正文"}]},
-        {"type": "stage", "stage": "generating"},
-        {"type": "chunk", "content": "回答"},
-        {"type": "done", "session_id": "session-1"},
-    ]
-
-    async def chat_query(self, query, structured=False):
-        assert structured is True
-        assert query.files[0]["content"] == "正文"
-        for event in events:
-            yield event
-
-    async with running_socket(monkeypatch, chat_query) as (websocket, opened, exited):
-        await websocket.send({"message": "hello", "request_id": "request-1", "files": [{"name": "doc.txt", "content": "正文"}]})
-        received = [await websocket.event() for _ in events]
-        assert received == [{**event, "request_id": "request-1"} for event in events]
-        assert websocket.accepted
-    assert len(opened) == len(exited) == 2
-
-
-@pytest.mark.parametrize("disconnect", [False, True])
-async def test_websocket_cancellation_releases_generator_and_database(monkeypatch, disconnect):
-    released = asyncio.Event()
-    started = asyncio.Event()
-
-    async def chat_query(self, query, structured=False):
-        try:
-            if query.message == "after cancellation":
-                yield {"type": "done", "session_id": "after-cancel"}
-                return
-            started.set()
-            yield {"type": "chunk", "content": "partial"}
-            await asyncio.Event().wait()
-        finally:
-            released.set()
-
-    async with running_socket(monkeypatch, chat_query) as (websocket, opened, exited):
-        await websocket.send({"message": "hello", "request_id": "cancel-1"})
-        assert (await websocket.event())["type"] == "chunk"
-        await asyncio.wait_for(started.wait(), timeout=2)
-        await websocket.send(None if disconnect else {"type": "cancel", "request_id": "cancel-1"})
-        assert await websocket.event() == {"type": "cancelled", "request_id": "cancel-1"}
-        await asyncio.wait_for(released.wait(), timeout=2)
-        if not disconnect:
-            await websocket.send({"message": "after cancellation", "request_id": "cancel-2"})
-            assert await websocket.event() == {"type": "done", "session_id": "after-cancel", "request_id": "cancel-2"}
-    assert len(opened) == len(exited) == (2 if disconnect else 3)
-    for database in opened:
-        database.rollback.assert_awaited_once()
-
-
-async def test_websocket_wrong_cancel_does_not_cancel_and_busy_request_is_rejected(monkeypatch):
-    released = asyncio.Event()
-
-    async def chat_query(self, query, structured=False):
-        try:
-            yield {"type": "stage", "stage": "generating"}
-            await asyncio.Event().wait()
-        finally:
-            released.set()
-
-    async with running_socket(monkeypatch, chat_query) as (websocket, _, _):
-        await websocket.send({"message": "first", "request_id": "first"})
-        assert (await websocket.event())["request_id"] == "first"
-        await websocket.send({"type": "cancel", "request_id": "other"})
-        await websocket.send({"message": "second", "request_id": "second"})
-        event = await websocket.event()
-        assert event["type"] == "error" and event["request_id"] == "second"
-        assert not released.is_set()
-        await websocket.send({"type": "cancel", "request_id": "first"})
-        assert (await websocket.event())["type"] == "cancelled"
-
-
-async def test_websocket_recovers_after_validation_and_runtime_errors(monkeypatch):
-    async def chat_query(self, query, structured=False):
-        if query.message == "fail":
-            raise RuntimeError("private-provider-secret")
-        yield {"type": "done", "session_id": "session-1"}
-
-    async with running_socket(monkeypatch, chat_query) as (websocket, _, _):
-        await websocket.send({"message": "", "request_id": "invalid"})
-        invalid = await websocket.event()
-        assert invalid["type"] == "error" and invalid["request_id"] == "invalid"
-        await websocket.send({"message": "fail", "request_id": "failed"})
-        failure = await websocket.event()
-        assert failure["type"] == "error" and failure["request_id"] == "failed"
-        assert "private-" not in json.dumps(failure)
-        await websocket.send({"message": "retry", "request_id": "retried"})
-        assert await websocket.event() == {"type": "done", "session_id": "session-1", "request_id": "retried"}
-
-
-async def test_websocket_legacy_client_receives_plain_text(monkeypatch):
-    async def chat_query(self, query):
-        assert query.request_id is None
-        yield "legacy part "
-        yield "two"
-
-    async with running_socket(monkeypatch, chat_query) as (websocket, _, _):
-        await websocket.send({"message": "legacy"})
-        assert await asyncio.wait_for(websocket.outgoing.get(), timeout=2) == "legacy part "
-        assert await asyncio.wait_for(websocket.outgoing.get(), timeout=2) == "two"
-
-
-def test_authenticated_attachment_websocket_and_history_flow(ai_client, configured_chat, monkeypatch):
+def test_authenticated_attachment_stream_and_history_flow(ai_client, configured_chat, monkeypatch):
     class Model:
         async def stream(self, prompt):
             assert "材料独特标记XYZ" in prompt
@@ -472,16 +295,13 @@ def test_authenticated_attachment_websocket_and_history_flow(ai_client, configur
     created = ai_client.post("/ai/chat/create", headers=headers, json={"title": "isolated upload flow"})
     assert created.status_code == 200
     session_id = created.json()["data"]["session_id"]
-    ticket = ai_client.post("/system/auth/ws-ticket", headers=headers)
-    assert ticket.status_code == 200
-    with ai_client.websocket_connect(f"/ai/chat/ws?ticket={ticket.json()['data']['ticket']}") as websocket:
-        websocket.send_json({"message": "请总结材料", "session_id": session_id, "request_id": "api-flow", "files": [attachment]})
-        events = []
-        for _ in range(8):
-            event = websocket.receive_json()
-            events.append(event)
-            if event["type"] in {"done", "error"}:
-                break
+    response = ai_client.post(
+        "/ai/chat/stream",
+        headers=headers,
+        json={"message": "请总结材料", "session_id": session_id, "request_id": "api-flow", "files": [attachment]},
+    )
+    assert response.status_code == 200
+    events = [json.loads(line[6:]) for line in response.text.splitlines() if line.startswith("data: ")]
     assert [event["type"] for event in events] == ["stage", "stage", "citations", "stage", "chunk", "done"]
     assert [event["stage"] for event in events if event["type"] == "stage"] == ["routing", "retrieving", "generating"]
     assert all(event["request_id"] == "api-flow" for event in events)
@@ -493,8 +313,7 @@ def test_authenticated_attachment_websocket_and_history_flow(ai_client, configur
 
 
 @pytest.mark.parametrize("scenario", ["cross_user_denied", "own_allowed", "superuser_allowed"])
-@pytest.mark.parametrize("transport", ["websocket", "sse"])
-def test_real_chat_auth_enforces_knowledge_creator_scope(ai_client, websocket_scope_data, configured_chat, monkeypatch, scenario, transport):
+def test_real_chat_auth_enforces_knowledge_creator_scope(ai_client, websocket_scope_data, configured_chat, monkeypatch, scenario):
     searched_ids = []
     prompts = []
     derived_auth = []
@@ -534,21 +353,9 @@ def test_real_chat_auth_enforces_knowledge_creator_scope(ai_client, websocket_sc
     login = ai_client.post("/system/auth/login", data={"username": username, "password": password})
     assert login.status_code == 200
     headers = {"Authorization": f"Bearer {login.json()['data']['access_token']}"}
-    if transport == "sse":
-        response = ai_client.post("/ai/chat/stream", headers=headers, json={"message": "请总结知识库资料", "knowledge_base_ids": [base["id"]], "request_id": scenario})
-        assert response.status_code == 200
-        events = [json.loads(line[6:]) for line in response.text.splitlines() if line.startswith("data: ")]
-    else:
-        ticket = ai_client.post("/system/auth/ws-ticket", headers=headers)
-        assert ticket.status_code == 200
-        with ai_client.websocket_connect(f"/ai/chat/ws?ticket={ticket.json()['data']['ticket']}") as websocket:
-            websocket.send_json({"message": "请总结知识库资料", "knowledge_base_ids": [base["id"]], "request_id": scenario})
-            events = []
-            for _ in range(8):
-                event = websocket.receive_json()
-                events.append(event)
-                if event["type"] in {"done", "error"}:
-                    break
+    response = ai_client.post("/ai/chat/stream", headers=headers, json={"message": "请总结知识库资料", "knowledge_base_ids": [base["id"]], "request_id": scenario})
+    assert response.status_code == 200
+    events = [json.loads(line[6:]) for line in response.text.splitlines() if line.startswith("data: ")]
     assert all(event["request_id"] == scenario for event in events)
     if scenario == "cross_user_denied":
         assert [event["type"] for event in events] == ["error"]

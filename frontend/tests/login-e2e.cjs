@@ -43,8 +43,12 @@ async function run() {
           [667, 375],
         ]) {
           await page.setViewportSize({ width, height });
+          await page.waitForFunction((expectedHeight) => {
+            const root = document.querySelector(".login-page-root");
+            return root && Math.abs(root.clientHeight - expectedHeight) <= 2;
+          }, height);
           await page.locator(".login-page-panel__main").evaluate((panel) => (panel.scrollTop = 0));
-          await page.waitForTimeout(150);
+          await page.waitForTimeout(100);
           assert.equal(
             await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
             false,

@@ -51,7 +51,7 @@ async def arch_redis():
 
 
 @pytest.mark.parametrize("operation", ["change", "reset"])
-@pytest.mark.parametrize("transport", ["http", "refresh", "ws", "ticket"])
+@pytest.mark.parametrize("transport", ["http", "refresh", "session"])
 async def test_password_change_invalidates_all_preexisting_sessions(
     arch_sessions, arch_redis, monkeypatch, operation, transport,
 ):
@@ -91,9 +91,6 @@ async def test_password_change_invalidates_all_preexisting_sessions(
                 return await dependencies.get_current_user(
                     request=SimpleNamespace(state=SimpleNamespace()), db=db, redis=arch_redis, token=token.access_token,
                 )
-            if transport == "ticket":
-                ticket = await LoginService.create_ws_ticket(arch_redis, session_id)
-                return await dependencies._verify_ws_ticket(ticket, db, arch_redis)
             return await dependencies._verify_session(session_id, db, arch_redis)
 
     for token in tokens:
@@ -158,7 +155,7 @@ async def test_auto_login_ticket_keeps_issued_credential_binding(
         assert await dependencies.get_current_user(request=request, db=db, redis=arch_redis, token=new_session.access_token)
 
 
-@pytest.mark.parametrize("transport", ["http", "ws", "ticket"])
+@pytest.mark.parametrize("transport", ["http", "session"])
 async def test_live_session_keeps_user_id_when_username_is_reused(arch_sessions, arch_redis, transport):
     async with arch_sessions() as db:
         original = UserModel(username="original", name="Original", password="fixture", status=0)
@@ -192,11 +189,7 @@ async def test_live_session_keeps_user_id_when_username_is_reused(arch_sessions,
         identity = response.json()
     else:
         async with arch_sessions() as db:
-            if transport == "ticket":
-                await RedisCURD(arch_redis).set(dependencies.WS_TICKET_PREFIX + "arch-ticket", {"session_id": session_id}, expire=60)
-                auth = await dependencies._verify_ws_ticket("arch-ticket", db, arch_redis)
-            else:
-                auth = await dependencies._verify_session(session_id, db, arch_redis)
+            auth = await dependencies._verify_session(session_id, db, arch_redis)
             identity = {"id": auth.user.id, "username": auth.user.username}
     assert identity == {"id": original_id, "username": "renamed"}
 

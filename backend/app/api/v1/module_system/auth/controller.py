@@ -113,21 +113,6 @@ async def logout_controller(
     return ErrorResponse(msg="退出失败")
 
 
-@AuthRouter.post(
-    "/ws-ticket",
-    summary="创建 WebSocket 一次性认证凭证",
-    dependencies=[Depends(get_current_user)],
-)
-async def create_ws_ticket_controller(
-    request: Request,
-    redis: Annotated[Redis, Depends(redis_getter)],
-) -> JSONResponse:
-    """签发一次性 WebSocket 票据，避免在 URL 中暴露 JWT。"""
-    session_id = getattr(getattr(request.state, "ctx", None), "session_id", None)
-    ticket = await LoginService.create_ws_ticket(redis=redis, session_id=session_id or "")
-    return SuccessResponse(data={"ticket": ticket, "expires_in": 60}, msg="创建成功")
-
-
 @AuthRouter.get(
     "/auto-login/users",
     summary="获取免登录用户列表",

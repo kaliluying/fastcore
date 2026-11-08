@@ -17,11 +17,7 @@ import { ResultEnum } from "@/enums/api/result.enum";
 import { ElNotification } from "element-plus";
 import { store } from "../pinia";
 import type { UserInfo } from "@/api/module_system/user";
-import {
-  clearLegacyUserRouteCache,
-  USER_STORE_PERSISTED_FIELDS,
-  USER_STORE_PERSIST_KEY,
-} from "./userPersistence";
+import { USER_STORE_PERSISTED_FIELDS, USER_STORE_PERSIST_KEY } from "./userPersistence";
 
 /** 延迟导入路由守卫辅助函数，避免状态模块与守卫之间的循环依赖。 */
 let _routerUtilsPromise: Promise<typeof import("@/router/beforeEach")> | null = null;
@@ -64,17 +60,15 @@ export const useUserStore = defineStore(
     // 记住我状态。
     const rememberMe = ref(Auth.getRememberMe());
     let userInfoRequest = 0;
-    /** 扩展用户信息类型：兼容 API 返回的 `user_id`，该字段不属于标准 UserInfo。 */
-    type UserInfoLike = Partial<UserInfo> & Record<string, any>;
 
     // 基础用户信息。
-    const basicInfo = computed(() => info.value as UserInfoLike);
+    const basicInfo = computed(() => info.value);
     // 设置状态。
     const getSettingState = computed(() => useSettingsStore().$state);
     // 工作台状态。
     const getWorktabState = computed(() => useWorktabStore().$state);
     // 获取基础用户信息。
-    const getBasicInfo = computed(() => info.value as UserInfoLike);
+    const getBasicInfo = computed(() => info.value);
     // 获取路由列表。
     const getRouteList = computed(() => routeList.value);
     // 获取权限列表。
@@ -135,8 +129,7 @@ export const useUserStore = defineStore(
      */
     const checkAndClearWorktabs = () => {
       const lastUserId = localStorage.getItem(StorageConfig.LAST_USER_ID_KEY);
-      const ui = info.value as UserInfoLike;
-      const currentUserId = ui.id || ui.user_id;
+      const currentUserId = info.value?.id;
 
       // 无法获取当前用户 ID 时跳过检查。
       if (!currentUserId) return;
@@ -254,8 +247,7 @@ export const useUserStore = defineStore(
     async function logout(options?: LogoutOptions) {
       const shouldNavigate = options?.navigate !== false;
 
-      const ui = info.value as UserInfoLike;
-      const currentUserId = ui.id || ui.user_id;
+      const currentUserId = info.value?.id;
       if (currentUserId) {
         localStorage.setItem(StorageConfig.LAST_USER_ID_KEY, String(currentUserId));
       }
@@ -392,7 +384,6 @@ export const useUserStore = defineStore(
         const hydratedState = store.$state as { routeList: MenuTable[]; hasGetRoute: boolean };
         hydratedState.routeList = [];
         hydratedState.hasGetRoute = false;
-        clearLegacyUserRouteCache(localStorage);
       },
     },
   }

@@ -113,7 +113,7 @@ async def test_recovery_task_is_awaited_before_shutdown_or_failed_startup(monkey
         engine.dispose.assert_awaited_once()
 
 
-def test_http_and_websocket_routes_use_configured_limits(monkeypatch):
+def test_http_routes_use_configured_limits(monkeypatch):
     monkeypatch.setattr(init_app.settings, "RATE_LIMITER_TIMES", 7)
     monkeypatch.setattr(init_app.settings, "RATE_LIMITER_SECONDS", 23)
     registrations = []
@@ -123,8 +123,8 @@ def test_http_and_websocket_routes_use_configured_limits(monkeypatch):
             registrations.extend(dependency.dependency for dependency in kwargs["dependencies"])
 
     init_app.register_routers(RouterCapture())
-    assert len(registrations) >= 5
-    assert any(isinstance(limiter, init_app.WebSocketRateLimiter) for limiter in registrations)
+    assert len(registrations) >= 4
+    assert all(isinstance(limiter, init_app.RateLimiter) for limiter in registrations)
     assert all(limiter.times == 7 and limiter.milliseconds == 23000 for limiter in registrations)
 
 

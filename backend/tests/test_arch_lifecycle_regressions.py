@@ -122,8 +122,8 @@ async def test_all_module_shutdown_hooks_run_after_a_hook_fails(monkeypatch):
     assert stopped == ["two:fail", "two:stop", "one:stop"]
 
 
-@pytest.mark.parametrize("command", ["migrate", "upgrade"])
-def test_migration_cli_runs_only_migrations_under_the_startup_lock(monkeypatch, command):
+def test_migration_cli_runs_only_migrations_under_the_startup_lock(monkeypatch):
+    command = "migrate"
     redis = SimpleNamespace(ping=AsyncMock(), aclose=AsyncMock())
     locked = False
     commands = []

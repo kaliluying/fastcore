@@ -29,19 +29,6 @@ class RoleCreateSchema(BaseModel):
     status: int = Field(default=0, ge=0, le=1, description="状态(0:启动 1:停用)")
     description: str | None = Field(default=None, max_length=255, description="描述")
 
-    @field_validator("data_scope", mode="before")
-    @classmethod
-    def normalize_legacy_data_scope(cls, value: int | None) -> int | None:
-        """将旧版部门范围兼容为当前单组织版的本人范围。
-
-        Args:
-            value: 数据库或旧客户端传入的数据范围值。
-
-        Returns:
-            int | None: 当前版本支持的 1 或 4，空值保持为空。
-        """
-        return 1 if value in {2, 3, 5} else value
-
     @field_validator("code")
     @classmethod
     def validate_code(cls, value: str):

@@ -24,8 +24,7 @@ function kebabSnakeBodyToPascalKey(body: string): string {
 
 /**
  * 解析为 Element Plus 图标组件；否则 null（再走 Iconify / Remix 映射）。
- * 对齐旧版 `layouts/old/components/Menu/components/MenuItemContent.vue`（el-icon / 自定义文件名）
- * 及对 `el-icon-*` 主体的 Pascal 推导。
+ * 支持 `el-icon-*` 及主体 PascalCase 推导。
  */
 export function resolveElementPlusIconComponent(icon?: string | null): Component | null {
   const ic = icon?.trim();
@@ -271,9 +270,3 @@ export function resolveIconForFaSvgIcon(stored?: string | null): string {
 
   return localSvgNameToRemixIcon(s);
 }
-
-/**
- * 本地 SVG URL（与 `@utils/icons` 同源）。
- * @deprecated 新代码请从 `@utils/icons` 使用 {@link resolveLocalIconUrl}
- */
-export { resolveLocalIconUrl as resolveMenuLocalSvgUrl } from "../icons";

@@ -7,6 +7,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
+from pydantic import ValidationError
 
 from app.api.v1.module_system.role import crud as role_crud
 from app.api.v1.module_system.role.crud import RoleCRUD
@@ -25,11 +26,10 @@ SEED_DIR = Path(__file__).resolve().parents[1] / "app" / "scripts" / "data"
 APP_DIR = Path(__file__).resolve().parents[1] / "app"
 
 
-def test_role_schema_normalizes_legacy_department_data_scope() -> None:
-    """Keep old role rows readable after department data scopes were removed."""
-    role = RoleOutSchema(name="旧角色", code="LEGACY_ROLE", data_scope=3)
-
-    assert role.data_scope == 1
+def test_role_schema_rejects_legacy_department_data_scope() -> None:
+    """Legacy department data scopes (e.g. 2, 3) must be rejected."""
+    with pytest.raises(ValidationError):
+        RoleOutSchema(name="旧角色", code="LEGACY_ROLE", data_scope=3)
 
 
 class _FakeScalarResult:

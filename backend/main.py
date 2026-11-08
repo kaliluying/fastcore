@@ -256,13 +256,9 @@ def revision(
 
 @fastcore_cli.command(
     name="migrate",
-    help="部署阶段显式应用迁移，运行 python main.py migrate --env=prod（与 upgrade 兼容）",
+    help="部署阶段显式应用迁移，运行 python main.py migrate --env=prod",
 )
-@fastcore_cli.command(
-    name="upgrade",
-    help="应用最新的 Alembic 迁移, 运行 python main.py upgrade --env=dev",
-)
-def upgrade(
+def migrate(
     env: Annotated[
         EnvironmentEnum, typer.Option("--env", help="运行环境 (dev, prod)")
     ] = EnvironmentEnum.DEV,

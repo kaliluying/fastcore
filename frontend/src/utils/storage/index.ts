@@ -72,14 +72,6 @@ export class StorageConfig {
   }
 
   /**
-   * 生成旧版本的存储键名（不带分隔符）
-   * @param version 版本号，默认使用当前版本
-   */
-  static generateLegacyKey(version: string = this.CURRENT_VERSION): string {
-    return `${this.STORAGE_PREFIX}${version}`;
-  }
-
-  /**
    * 创建存储键匹配的正则表达式
    * @param storeId 存储ID
    */
@@ -141,16 +133,6 @@ class StorageCompatibilityManager {
   }
 
   /**
-   * 获取系统存储数据（兼容旧格式）
-   */
-  getSystemStorage(): any {
-    const version = this.getSystemVersion() || StorageConfig.CURRENT_VERSION;
-    const legacyKey = StorageConfig.generateLegacyKey(version);
-    const data = localStorage.getItem(legacyKey);
-    return data ? JSON.parse(data) : null;
-  }
-
-  /**
    * 单次遍历 localStorage key，同时判定「是否有当前版本数据」「是否有任意版本数据」。
    * 替代分别调用 hasCurrentVersionStorage / hasAnyVersionStorage 造成的重复遍历。
    */
@@ -172,19 +154,6 @@ class StorageCompatibilityManager {
       }
     }
     return { hasCurrent, hasAny };
-  }
-
-  /**
-   * 获取旧格式的本地存储数据
-   */
-  private getLegacyStorageData(): Record<string, any> {
-    try {
-      const systemStorage = this.getSystemStorage();
-      return systemStorage || {};
-    } catch (error) {
-      console.warn("[Storage] 解析旧格式存储数据失败:", error);
-      return {};
-    }
   }
 
   /**
@@ -249,20 +218,13 @@ class StorageCompatibilityManager {
     try {
       const { hasCurrent, hasAny } = this.analyzeStorageKeys();
 
-      // 1. 当前版本 → 一切正常
+      // 1. 当前版本 → 正常
       if (hasCurrent) return true;
 
-      // 2. 其他版本 → 待迁移，暂时也能用
+      // 2. 其他版本 → 待迁移，正常
       if (hasAny) return true;
 
-      // 3. 旧格式（无 storeId 的老系统）
-      const legacyData = this.getLegacyStorageData();
-      if (Object.keys(legacyData).length > 0) {
-        console.debug("[Storage] 发现旧版本存储数据");
-        return true;
-      }
-
-      // 4. 完全空存储
+      // 3. 完全空存储
       if (requireAuth) {
         console.warn("[Storage] 未发现任何存储数据，需要重新登录");
         this.performSystemLogout();
@@ -283,13 +245,6 @@ class StorageCompatibilityManager {
 
 // 创建存储兼容性管理器实例
 const storageManager = new StorageCompatibilityManager();
-
-/**
- * 获取系统存储数据
- */
-export function getSystemStorage(): any {
-  return storageManager.getSystemStorage();
-}
 
 /**
  * 验证本地存储数据

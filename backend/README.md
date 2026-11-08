@@ -50,7 +50,7 @@ uv run main.py run --env=prod
 
 生产启动会在 Redis 启动锁下自动应用已提交的 Alembic 迁移、创建缺失结构并补齐稳定基础数据，然后校验数据库结构。`bootstrap` 和 `migrate` 仍可在部署阶段用于显式预执行；`reset` 会删除数据，不应作为启动修复手段。
 
-开发模型变更后运行 `uv run main.py revision --env=dev`，审查生成的 `app/alembic/versions/` 脚本及数据影响，再显式执行迁移。`upgrade` 是 `migrate` 的兼容命令。
+开发模型变更后运行 `uv run main.py revision --env=dev`，审查生成的 `app/alembic/versions/` 脚本及数据影响，再显式执行迁移。
 
 ## 数据与验证
 

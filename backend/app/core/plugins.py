@@ -27,7 +27,6 @@ class AiPluginManifest:
     route_prefix: str
     required_modules: tuple[str, ...]
     routers: tuple[str, ...]
-    websocket_routers: tuple[str, ...]
     model_modules: tuple[str, ...]
     startup_hooks: tuple[str, ...]
     permissions: tuple[str, ...]
@@ -84,7 +83,6 @@ def get_ai_plugin_manifest() -> AiPluginManifest:
         route_prefix=route_prefix.rstrip("/"),
         required_modules=_as_tuple(raw.get("required_modules"), "required_modules"),
         routers=_as_tuple(raw.get("routers"), "routers"),
-        websocket_routers=_as_tuple(raw.get("websocket_routers"), "websocket_routers"),
         model_modules=_as_tuple(raw.get("model_modules"), "model_modules"),
         startup_hooks=_as_tuple(raw.get("startup_hooks"), "startup_hooks"),
         permissions=_as_tuple(raw.get("permissions"), "permissions"),

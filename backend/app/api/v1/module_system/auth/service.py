@@ -465,29 +465,6 @@ class LoginService:
 
         return True
 
-    @staticmethod
-    async def create_ws_ticket(redis: Redis, session_id: str) -> str:
-        """为 WebSocket 升级签发短期一次性票据。
-
-        Args:
-            redis: 用于存储票据的 Redis 连接。
-            session_id: 当前已认证请求所属的会话 ID。
-
-        Returns:
-            仅可消费一次的不透明票据值。
-        """
-        if not session_id:
-            raise CustomException(msg="认证已失效", code=10401, status_code=401)
-        ticket = secrets.token_urlsafe(32)
-        ok = await RedisCURD(redis).set(
-            f"auth:ws_ticket:{ticket}",
-            {"session_id": session_id},
-            expire=60,
-        )
-        if not ok:
-            raise CustomException(msg="创建 WebSocket ticket 失败")
-        return ticket
-
 
 class CaptchaService:
     """验证码服务。"""

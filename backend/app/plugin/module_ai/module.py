@@ -17,7 +17,6 @@ def get_module() -> ModuleSpec:
     return ModuleSpec(
         name=manifest.name,
         routers=(f"{package}.module:get_http_router",),
-        websocket_routers=tuple(f"{package}.{entry}" for entry in manifest.websocket_routers),
         model_modules=tuple(f"{package}.{path}" for path in manifest.model_modules),
         permissions=frozenset(manifest.permissions),
         seed_dir=Path(__file__).parent / "data",

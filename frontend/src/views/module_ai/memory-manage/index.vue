@@ -165,7 +165,7 @@ defineOptions({ name: "AiMemoryManage" });
 
 // ── 搜索栏 ──
 const showSearchBar = ref(true);
-const searchForm = reactive<{ memory_type?: string; key?: string }>({});
+const searchForm = ref<{ memory_type?: string; key?: string }>({});
 const searchItems = ref<SearchFormItem[]>([
   {
     key: "memory_type",
@@ -249,8 +249,8 @@ async function loadData() {
     const res = await AiMemoryAPI.list({
       page_no: pagination.current,
       page_size: pagination.size,
-      memory_type: (searchForm.memory_type || undefined) as MemoryType | undefined,
-      key: searchForm.key || undefined,
+      memory_type: (searchForm.value.memory_type || undefined) as MemoryType | undefined,
+      key: searchForm.value.key || undefined,
     });
     const body = res.data.data;
     data.value = body.items || [];
@@ -270,8 +270,10 @@ function handleSearch() {
   loadData();
 }
 function onResetSearch() {
-  searchForm.memory_type = "";
-  searchForm.key = "";
+  searchForm.value = {
+    memory_type: "",
+    key: "",
+  };
   handleSearch();
 }
 function handleSizeChange(val: number) {

@@ -11,7 +11,7 @@ from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html, get_swagge
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi_limiter import FastAPILimiter
-from fastapi_limiter.depends import RateLimiter, WebSocketRateLimiter
+from fastapi_limiter.depends import RateLimiter
 
 from app.core import cache_util
 
@@ -19,7 +19,7 @@ from .common.enums import EnvironmentEnum
 from .config.path_conf import BASE_DIR
 from .config.setting import settings
 from .core.exceptions import handle_exception
-from .core.http_limit import http_limit_callback, ws_limit_callback
+from .core.http_limit import http_limit_callback
 from .core.logger import logger
 from .core.modules import get_module_routers, run_module_hooks
 from .core.redis_crud import RedisCURD
@@ -145,7 +145,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[Any, Any]:
                 redis=app.state.redis,
                 prefix=settings.REQUEST_LIMITER_REDIS_PREFIX,
                 http_callback=http_limit_callback,
-                ws_callback=ws_limit_callback,
             )
             logger.info("✅ 请求限流器初始化完成")
         except Exception as error:
@@ -214,8 +213,6 @@ def register_routers(app: FastAPI) -> None:
     app.include_router(common_router, dependencies=[Depends(RateLimiter(times=times, seconds=seconds))])
     app.include_router(platform_router, dependencies=[Depends(RateLimiter(times=times, seconds=seconds))])
     app.include_router(system_router, dependencies=[Depends(RateLimiter(times=times, seconds=seconds))])
-    for router in get_module_routers(websocket=True):
-        app.include_router(router=router, dependencies=[Depends(WebSocketRateLimiter(times=times, seconds=seconds))])
 
     for router in get_module_routers():
         app.include_router(router=router, dependencies=[Depends(RateLimiter(times=times, seconds=seconds))])

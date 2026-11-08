@@ -135,45 +135,24 @@ class VersionManager {
     return storedVersion === StorageConfig.CURRENT_VERSION;
   }
 
-  private findLegacyStorage(): { oldSysKey: string | null; oldVersionKeys: string[] } {
+  private findLegacyStorage(): string[] {
     const storageKeys = Object.keys(localStorage);
-    const currentVersionPrefix = StorageConfig.generateStorageKey("").slice(0, -1);
-
-    const oldSysKey =
-      storageKeys.find(
-        (key) =>
-          StorageConfig.isVersionedKey(key) && key !== currentVersionPrefix && !key.includes("-")
-      ) || null;
-
-    const oldVersionKeys = storageKeys.filter(
-      (key) =>
-        StorageConfig.isVersionedKey(key) &&
-        !StorageConfig.isCurrentVersionKey(key) &&
-        key.includes("-")
+    return storageKeys.filter(
+      (key) => StorageConfig.isVersionedKey(key) && !StorageConfig.isCurrentVersionKey(key)
     );
-
-    return { oldSysKey, oldVersionKeys };
   }
 
-  private cleanupLegacyData(oldSysKey: string | null, oldVersionKeys: string[]): void {
-    if (oldSysKey) {
-      localStorage.removeItem(oldSysKey);
-      console.info(`[Upgrade] 已清理旧存储: ${oldSysKey}`);
-    }
-
+  private cleanupLegacyData(oldVersionKeys: string[]): void {
     oldVersionKeys.forEach((key) => {
       localStorage.removeItem(key);
       console.info(`[Upgrade] 已清理旧存储: ${key}`);
     });
   }
 
-  private executeUpgrade(
-    storedVersion: string,
-    legacyStorage: ReturnType<typeof this.findLegacyStorage>
-  ): void {
-    this.cleanupLegacyData(legacyStorage.oldSysKey, legacyStorage.oldVersionKeys);
+  private executeUpgrade(storedVersion: string, oldVersionKeys: string[]): void {
+    this.cleanupLegacyData(oldVersionKeys);
     this.setStoredVersion(StorageConfig.CURRENT_VERSION);
-    console.info(`[Storage] 已迁移本地数据: ${storedVersion} → ${StorageConfig.CURRENT_VERSION}`);
+    console.info(`[Storage] 已清理旧版本数据: ${storedVersion} → ${StorageConfig.CURRENT_VERSION}`);
   }
 
   async processUpgrade(): Promise<void> {
@@ -194,14 +173,14 @@ class VersionManager {
       return;
     }
 
-    const legacyStorage = this.findLegacyStorage();
-    if (!legacyStorage.oldSysKey && legacyStorage.oldVersionKeys.length === 0) {
+    const oldVersionKeys = this.findLegacyStorage();
+    if (oldVersionKeys.length === 0) {
       this.setStoredVersion(StorageConfig.CURRENT_VERSION);
       console.info("[Upgrade] 无旧数据，已更新版本号");
       return;
     }
 
-    this.executeUpgrade(storedVersion!, legacyStorage);
+    this.executeUpgrade(storedVersion!, oldVersionKeys);
   }
 }
 

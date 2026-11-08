@@ -5,6 +5,12 @@ const { chromium } = require("playwright");
 
 async function run() {
   const [frontendPort, backendPort, artifacts, phase] = process.argv.slice(2);
+  if (!frontendPort || !backendPort || !artifacts) {
+    console.error(
+      "Usage: node skeleton-e2e.cjs <frontendPort> <backendPort> <artifactsDir> [phase]"
+    );
+    process.exit(1);
+  }
   const backend = `http://127.0.0.1:${backendPort}`;
   const browser = await chromium.launch({ channel: "chrome", headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });

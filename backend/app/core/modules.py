@@ -19,7 +19,6 @@ from app.core.base_model import MappedBase
 class ModuleSpec:
     name: str
     routers: tuple[str, ...] = ()
-    websocket_routers: tuple[str, ...] = ()
     model_modules: tuple[str, ...] = ()
     permissions: frozenset[str] = frozenset()
     seed_dir: Path | None = None
@@ -53,12 +52,12 @@ def get_modules() -> tuple[ModuleSpec, ...]:
     return modules
 
 
-def get_module_routers(*, websocket: bool = False) -> tuple[APIRouter, ...]:
+def get_module_routers() -> tuple[APIRouter, ...]:
     routers = []
     for module in get_modules():
         if not module.active:
             continue
-        for entry in module.websocket_routers if websocket else module.routers:
+        for entry in module.routers:
             router = resolve_entrypoint(entry)
             if callable(router) and not isinstance(router, APIRouter):
                 router = router()
