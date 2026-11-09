@@ -19,6 +19,8 @@ vi.mock("@/api/module_system/auth", () => ({
   default: { getCaptcha },
 }));
 vi.mock("@utils", () => ({ Auth: {}, HttpError: class extends Error {} }));
+
+const routeState = { query: {} as Record<string, unknown> };
 vi.mock("element-plus", () => ({ ElNotification: notification }));
 vi.mock("@/components/views/fa-login/widgets/FaAuthTopBar.vue", () => ({
   default: { template: "<div />" },
@@ -35,7 +37,7 @@ Object.assign(globalThis, {
   watch,
   useI18n: () => ({ t: (key: string) => key, locale: ref("zh") }),
   useRouter: () => ({ replace, resolve: (path: string) => ({ path, query: {} }) }),
-  useRoute: () => ({ query: {} }),
+  useRoute: () => routeState,
 });
 
 const AccountForm = defineComponent({
@@ -49,6 +51,7 @@ const AccountForm = defineComponent({
 describe("login submission locking", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    routeState.query = {};
     login.mockResolvedValue(undefined);
     validate.mockResolvedValue(true);
     replace.mockResolvedValue(undefined);
@@ -61,7 +64,6 @@ describe("login submission locking", () => {
         stubs: {
           FaLoginAccountForm: AccountForm,
           FaLoginCenterBackdrop: true,
-          FaLoginThirdPartySection: true,
           ElScrollbar: { template: "<div><slot /></div>" },
           ElButton: {
             emits: ["click"],
@@ -139,6 +141,18 @@ describe("login submission locking", () => {
     expect(getCaptcha).toHaveBeenCalledTimes(2);
     expect(wrapper.find('[role="alert"]').exists()).toBe(false);
     log.mockRestore();
+    wrapper.unmount();
+  });
+
+  it("hides third-party login and shows a returned provider error", async () => {
+    routeState.query = {
+      oauth_error:
+        "github OAuth \u672a\u914d\u7f6e\uff08\u5ba2\u6237\u7aef\u5bc6\u94a5\u4e3a\u7a7a\uff09",
+    };
+    const wrapper = renderLogin();
+    await flushPromises();
+    expect(wrapper.findComponent({ name: "FaLoginThirdPartySection" }).exists()).toBe(false);
+    expect(wrapper.get('[role="alert"]').text()).toContain("\u672a\u914d\u7f6e");
     wrapper.unmount();
   });
 });

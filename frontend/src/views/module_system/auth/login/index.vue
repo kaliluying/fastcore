@@ -210,6 +210,8 @@ async function consumeOAuthTicket(): Promise<boolean> {
 }
 
 onMounted(async () => {
+  const oauthError = route.query.oauth_error;
+  if (typeof oauthError === "string" && oauthError) loginError.value = oauthError;
   try {
     if (await consumeOAuthTicket()) return;
     await loadCaptcha();
