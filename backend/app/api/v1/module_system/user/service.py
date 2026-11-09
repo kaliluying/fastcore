@@ -336,7 +336,7 @@ class UserService:
                         raise CustomException(msg="昵称不能为空")
 
                     raw_gender = _get_val(row, "gender")
-                    if isinstance(raw_gender, (int, float)) and raw_gender in (0, 1, 2):
+                    if not isinstance(raw_gender, bool) and isinstance(raw_gender, (int, float)) and raw_gender in (0, 1, 2):
                         gender = str(int(raw_gender))
                     else:
                         gender = _clean_str(raw_gender) or "未知"
@@ -353,7 +353,7 @@ class UserService:
                         mobile = _clean_str(raw_mobile) or None
 
                     status_str = _clean_str(_get_val(row, "status"))
-                    status = 0 if status_str == "正常" else 1
+                    status = 0 if status_str in ("正常", "启用", "0") else 1
 
                     user_data = {
                         "username": username,

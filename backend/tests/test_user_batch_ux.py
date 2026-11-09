@@ -221,6 +221,15 @@ async def test_numeric_or_blank_gender_follows_schema(batch_auth, gender, expect
     assert (await auth.db.scalar(select(UserModel))).gender == expected
 
 
+@pytest.mark.parametrize("status_val, expected_status", [("正常", 0), ("启用", 0), ("0", 0), ("停用", 1), ("1", 1), ("禁用", 1)])
+async def test_batch_import_status_formats(batch_auth, status_val, expected_status):
+    auth, _ = batch_auth
+    result = await UserService(auth).batch_import(excel_upload([["status_user", "状态测试", None, None, "男", status_val]]))
+    assert result["success_count"] == 1
+    assert (await auth.db.scalar(select(UserModel))).status == expected_status
+
+
+
 async def test_batch_import_rejects_oversized_file(batch_auth, monkeypatch):
     auth, _ = batch_auth
     monkeypatch.setattr(settings, "MAX_FILE_SIZE", 10)
