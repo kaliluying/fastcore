@@ -261,7 +261,7 @@ export function resolveIconForFaSvgIcon(stored?: string | null): string {
   if (isIconifyStoredIcon(s)) return s;
 
   if (resolveElementPlusIconComponent(s)) {
-    return elementMenuIconToEpIconify(isElementPlusStoredIcon(s) ? s : s);
+    return elementMenuIconToEpIconify(s);
   }
 
   if (isElementPlusStoredIcon(s)) {

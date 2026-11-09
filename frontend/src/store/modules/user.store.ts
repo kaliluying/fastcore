@@ -80,7 +80,7 @@ export const useUserStore = defineStore(
      * 设置用户信息。
      * @param newInfo 新的用户信息。
      */
-    const setUserInfo = (newInfo: UserInfo | UserInfo) => {
+    const setUserInfo = (newInfo: UserInfo) => {
       info.value = newInfo;
       // 用户信息变更后刷新权限。
       setPermissions();

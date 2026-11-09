@@ -31,7 +31,7 @@
         v-model:columns="columnChecks"
         v-model:showSearchBar="showSearchBar"
         :loading="loading"
-        @refresh="refreshData"
+        @refresh="loadData"
       >
         <template #left>
           <FaTableHeaderLeft
@@ -262,9 +262,6 @@ async function loadData() {
   }
 }
 
-function refreshData() {
-  loadData();
-}
 function handleSearch() {
   pagination.current = 1;
   loadData();

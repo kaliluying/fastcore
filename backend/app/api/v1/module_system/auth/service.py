@@ -341,25 +341,25 @@ class LoginService:
         await RedisCURD(redis).set(
             key=f"{RedisInitKeyConfig.ACCESS_TOKEN.key}:{session_id}",
             value=access_token,
-            expire=int(access_expires.total_seconds()),
+            expire=settings.ACCESS_TOKEN_EXPIRE_SECONDS,
         )
 
         await RedisCURD(redis).set(
             key=f"{RedisInitKeyConfig.REFRESH_TOKEN.key}:{session_id}",
             value=refresh_token,
-            expire=int(refresh_expires.total_seconds()),
+            expire=settings.REFRESH_TOKEN_EXPIRE_SECONDS,
         )
 
         await RedisCURD(redis).set(
             key=f"{RedisInitKeyConfig.USER_SESSION.key}:{session_id}",
             value=session_info,
-            expire=int(refresh_expires.total_seconds()),
+            expire=settings.REFRESH_TOKEN_EXPIRE_SECONDS,
         )
 
         return JWTOutSchema(
             access_token=access_token,
             refresh_token=refresh_token,
-            expires_in=int(access_expires.total_seconds()),
+            expires_in=settings.ACCESS_TOKEN_EXPIRE_SECONDS,
             token_type=settings.TOKEN_TYPE,
         )
 
@@ -411,7 +411,7 @@ class LoginService:
         # 延长会话信息 Redis TTL
         await RedisCURD(redis).expire(
             key=f"{RedisInitKeyConfig.USER_SESSION.key}:{session_id}",
-            expire=int(refresh_expires.total_seconds()),
+            expire=settings.REFRESH_TOKEN_EXPIRE_SECONDS,
         )
 
         access_token = create_access_token(
@@ -435,20 +435,20 @@ class LoginService:
         await RedisCURD(redis).set(
             key=f"{RedisInitKeyConfig.ACCESS_TOKEN.key}:{session_id}",
             value=access_token,
-            expire=int(access_expires.total_seconds()),
+            expire=settings.ACCESS_TOKEN_EXPIRE_SECONDS,
         )
 
         await RedisCURD(redis).set(
             key=refresh_key,
             value=refresh_token_new,
-            expire=int(refresh_expires.total_seconds()),
+            expire=settings.REFRESH_TOKEN_EXPIRE_SECONDS,
         )
 
         return JWTOutSchema(
             access_token=access_token,
             refresh_token=refresh_token_new,
             token_type=settings.TOKEN_TYPE,
-            expires_in=int(access_expires.total_seconds()),
+            expires_in=settings.ACCESS_TOKEN_EXPIRE_SECONDS,
         )
 
     @staticmethod

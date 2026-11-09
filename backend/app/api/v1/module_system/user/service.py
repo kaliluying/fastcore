@@ -316,41 +316,43 @@ class UserService:
             gender_codes = {"男": "0", "女": "1", "未知": "2", "0": "0", "1": "1", "2": "2"}
             default_password_hash = PwdUtil.hash_password(password="123456")
 
+            def _clean_str(val: Any) -> str:
+                if val is None:
+                    return ""
+                s = str(val).strip()
+                return "" if s == "None" else s
+
             def _get_val(current_row: tuple[Any, ...], field_name: str) -> Any:
                 idx = col_indices[field_name]
                 return current_row[idx] if idx < len(current_row) else None
 
             for row_number, row in data_rows:
                 try:
-                    raw_user = _get_val(row, "username")
-                    raw_name = _get_val(row, "name")
-                    username = str(raw_user).strip() if raw_user is not None and str(raw_user).strip() not in ("", "None") else ""
-                    name = str(raw_name).strip() if raw_name is not None and str(raw_name).strip() not in ("", "None") else ""
+                    username = _clean_str(_get_val(row, "username"))
+                    name = _clean_str(_get_val(row, "name"))
                     if not username:
                         raise CustomException(msg="账号不能为空")
                     if not name:
                         raise CustomException(msg="昵称不能为空")
 
                     raw_gender = _get_val(row, "gender")
-                    gender = str(raw_gender).strip() if raw_gender is not None else "未知"
                     if isinstance(raw_gender, (int, float)) and raw_gender in (0, 1, 2):
                         gender = str(int(raw_gender))
-                    elif raw_gender is None or gender == "" or gender.lower() == "none":
-                        gender = "未知"
+                    else:
+                        gender = _clean_str(raw_gender) or "未知"
                     if gender not in gender_codes:
                         raise CustomException(msg="性别仅支持男、女、未知或编码 0、1、2")
 
-                    raw_email = _get_val(row, "email")
-                    raw_mobile = _get_val(row, "mobile")
-                    raw_status = _get_val(row, "status")
+                    raw_email = _clean_str(_get_val(row, "email"))
+                    email = raw_email or None
 
-                    email = str(raw_email).strip() if raw_email is not None and str(raw_email).strip() not in ("", "None") else None
+                    raw_mobile = _get_val(row, "mobile")
                     if isinstance(raw_mobile, float) and raw_mobile.is_integer():
                         mobile = str(int(raw_mobile))
                     else:
-                        mobile = str(raw_mobile).strip() if raw_mobile is not None and str(raw_mobile).strip() not in ("", "None") else None
+                        mobile = _clean_str(raw_mobile) or None
 
-                    status_str = str(raw_status).strip() if raw_status is not None else ""
+                    status_str = _clean_str(_get_val(row, "status"))
                     status = 0 if status_str == "正常" else 1
 
                     user_data = {
@@ -379,7 +381,7 @@ class UserService:
                             user_create_schema = UserCreateSchema(**new_user_data)
                             user_create_data = user_create_schema.model_dump(exclude_unset=True, exclude={"role_ids"})
                             new_user = await UserCRUD(self.auth).create(data=user_create_data)
-                            if user_create_schema.role_ids and len(user_create_schema.role_ids) > 0:
+                            if user_create_schema.role_ids:
                                 await UserCRUD(self.auth).set_user_roles(user_ids=[new_user.id], role_ids=user_create_schema.role_ids)
                     success_count += 1
                 except ValidationError as error:

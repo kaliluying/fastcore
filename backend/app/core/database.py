@@ -1,52 +1,18 @@
 from fastapi import FastAPI
 from redis import exceptions
 from redis.asyncio import Redis
-from sqlalchemy import Engine, Index, create_engine, inspect
+from sqlalchemy import Index, inspect
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy.orm import sessionmaker
 
 from app.config.setting import settings
 from app.core.base_model import MappedBase
 from app.core.exceptions import CustomException
 from app.core.logger import logger
-
-
-def create_engine_and_session(
-    db_url: str = settings.DB_URI,
-) -> tuple[Engine, sessionmaker]:
-    """创建同步数据库引擎和会话工厂。
-
-    Args:
-        db_url (str): 数据库连接URL,默认从配置中获取。
-
-    Returns:
-        tuple[Engine, sessionmaker]: 同步数据库引擎和会话工厂。
-    """
-    try:
-        if not settings.SQL_DB_ENABLE:
-            raise CustomException(
-                msg="请先开启数据库连接",
-                data="请启用 app/config/setting.py: SQL_DB_ENABLE",
-            )
-        # 同步数据库引擎
-        engine: Engine = create_engine(
-            url=db_url,
-            echo=settings.DATABASE_ECHO,
-            pool_pre_ping=settings.POOL_PRE_PING,
-            pool_recycle=settings.POOL_RECYCLE,
-        )
-    except Exception as e:
-        logger.error(f"❌ 数据库连接失败 {e}")
-        raise
-    else:
-        # 同步数据库会话工厂
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-        return engine, SessionLocal
 
 
 def create_async_engine_and_session(

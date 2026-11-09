@@ -206,9 +206,8 @@ class StorageCompatibilityManager {
    *
    * 检测策略（按优先级）：
    *   1. 存在当前版本数据 → 正常
-   *   2. 存在其他版本数据 → 可迁移，正常
-   *   3. 存在旧格式（无 storeId）数据 → 正常
-   *   4. 完全无数据：
+   *   2. 存在其他版本数据 → 待迁移，正常
+   *   3. 完全无数据：
    *      - requireAuth=false（首次访问 / 静态路由）→  正常
    *      - requireAuth=true                        →  触发系统登出
    *

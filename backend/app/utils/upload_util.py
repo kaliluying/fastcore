@@ -577,8 +577,6 @@ class UploadUtil:
             raise
         except Exception as e:
             logger.exception("文件上传失败")
-            if isinstance(e, CustomException):
-                raise
             raise CustomException(msg="文件上传失败，请稍后重试") from e
 
     @classmethod
