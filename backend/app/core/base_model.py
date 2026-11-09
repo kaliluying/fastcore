@@ -185,3 +185,11 @@ class UserMixin(MappedBase):
             foreign_keys=lambda: self.deleted_id,  # pyright: ignore[reportArgumentType]
             uselist=False,
         )
+
+
+# 延迟导入 UserModel 注册到 MappedBase.registry 中，供 UserMixin 的关联关系在独立或局部调用时正常解析
+try:
+    from app.api.v1.module_system.user.model import UserModel  # noqa: F401
+except (ImportError, AttributeError):
+    pass
+

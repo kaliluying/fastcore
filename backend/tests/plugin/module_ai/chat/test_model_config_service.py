@@ -266,3 +266,16 @@ async def test_list_anthropic_models_follows_pages(monkeypatch) -> None:
     assert requests[0][0] == "https://api.anthropic.test/v1/models"
     assert requests[0][1]["headers"] == {"x-api-key": "saved-key", "anthropic-version": "2023-06-01"}
     assert requests[1][1]["params"]["after_id"] == "claude-b"
+
+
+def test_ai_model_config_mapper_resolves_user_model():
+    from sqlalchemy.orm import class_mapper
+
+    from app.plugin.module_ai.chat.model import AiModelConfigModel
+
+    mapper = class_mapper(AiModelConfigModel)
+    assert mapper is not None
+    assert "created_by" in mapper.relationships
+    assert mapper.relationships["created_by"].mapper.class_.__name__ == "UserModel"
+
+

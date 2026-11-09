@@ -9,6 +9,7 @@ import httpx
 from cryptography.fernet import Fernet, InvalidToken
 from sqlalchemy import select
 
+from app.api.v1.module_system.user.model import UserModel  # noqa: F401
 from app.config.setting import settings as core_settings
 from app.core.base_schema import AuthSchema
 from app.core.database import async_db_session
