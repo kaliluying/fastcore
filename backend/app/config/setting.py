@@ -64,8 +64,19 @@ class Settings(BaseSettings):
     # ================================================= #
     SECRET_KEY: str = ""  # JWT密钥；生产环境必须显式配置
     ALGORITHM: str = "HS256"  # JWT算法
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 60 * 12  # access_token过期时间(秒)12 小时
-    REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 60 * 12  # refresh_token过期时间(秒)12 小时
+    ACCESS_TOKEN_EXPIRE_SECONDS: int = 60 * 60 * 12  # access_token过期时间(秒) 12 小时
+    REFRESH_TOKEN_EXPIRE_SECONDS: int = 60 * 60 * 12  # refresh_token过期时间(秒) 12 小时
+
+    @property
+    def ACCESS_TOKEN_EXPIRE_MINUTES(self) -> int:
+        """兼容保留以秒为单位的历史属性访问。"""
+        return self.ACCESS_TOKEN_EXPIRE_SECONDS
+
+    @property
+    def REFRESH_TOKEN_EXPIRE_MINUTES(self) -> int:
+        """兼容保留以秒为单位的历史属性访问。"""
+        return self.REFRESH_TOKEN_EXPIRE_SECONDS
+
     TOKEN_TYPE: str = "Bearer"  # token类型（RFC 6750 标准大小写）
     TOKEN_REQUEST_PATH_EXCLUDE: list[str] = ["api/v1/auth/login"]  # JWT / RBAC 路由白名单
     TOKEN_SLIDING_EXPIRE: bool = True  # 是否启用滑动过期(用户操作时自动续期)

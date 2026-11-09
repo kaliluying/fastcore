@@ -308,8 +308,8 @@ class LoginService:
             login_location=login_location,
         )
 
-        access_expires = timedelta(seconds=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-        refresh_expires = timedelta(seconds=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
+        access_expires = timedelta(seconds=settings.ACCESS_TOKEN_EXPIRE_SECONDS)
+        refresh_expires = timedelta(seconds=settings.REFRESH_TOKEN_EXPIRE_SECONDS)
 
         now = datetime.now()
         session_info = {
@@ -404,8 +404,8 @@ class LoginService:
         if not await RedisCURD(redis).compare_and_delete(refresh_key, refresh_token.refresh_token):
             raise CustomException(msg="刷新令牌已失效，请重新登录")
 
-        access_expires = timedelta(seconds=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-        refresh_expires = timedelta(seconds=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
+        access_expires = timedelta(seconds=settings.ACCESS_TOKEN_EXPIRE_SECONDS)
+        refresh_expires = timedelta(seconds=settings.REFRESH_TOKEN_EXPIRE_SECONDS)
         now = datetime.now()
 
         # 延长会话信息 Redis TTL

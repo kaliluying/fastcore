@@ -19,7 +19,7 @@ from .common.enums import EnvironmentEnum
 from .config.path_conf import BASE_DIR
 from .config.setting import settings
 from .core.exceptions import handle_exception
-from .core.http_limit import http_limit_callback
+from .core.http_limit import http_limit_callback, rate_limit_identifier
 from .core.logger import logger
 from .core.modules import get_module_routers, run_module_hooks
 from .core.redis_crud import RedisCURD
@@ -144,6 +144,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[Any, Any]:
             await FastAPILimiter.init(
                 redis=app.state.redis,
                 prefix=settings.REQUEST_LIMITER_REDIS_PREFIX,
+                identifier=rate_limit_identifier,
                 http_callback=http_limit_callback,
             )
             logger.info("✅ 请求限流器初始化完成")

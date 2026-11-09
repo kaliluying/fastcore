@@ -104,7 +104,6 @@ def create_async_engine_and_session(
         return async_engine, AsyncSessionLocal
 
 
-engine, db_session = create_engine_and_session(settings.DB_URI)
 async_engine, async_db_session = create_async_engine_and_session(settings.ASYNC_DB_URI)
 
 

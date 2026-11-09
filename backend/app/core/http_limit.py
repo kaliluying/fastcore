@@ -3,7 +3,13 @@ from typing import NoReturn
 
 from fastapi import Request, Response
 
+from app.core.client_ip import get_client_ip
 from app.core.exceptions import CustomException
+
+
+async def rate_limit_identifier(request: Request) -> str:
+    """基于可信客户端 IP 和请求路径生成限流标识。"""
+    return f"{get_client_ip(request)}:{request.scope['path']}"
 
 
 def http_limit_callback(request: Request, response: Response, expire: int) -> NoReturn:

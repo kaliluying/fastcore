@@ -1,19 +1,21 @@
 ﻿import io
 from typing import Any
 
-import pandas as pd
 from fastapi import UploadFile
+from openpyxl import load_workbook
 from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.v1.module_platform.menu.crud import MenuCRUD
 from app.api.v1.module_platform.menu.schema import MenuOutSchema, MenuTreeOutSchema
+from app.config.setting import settings
 from app.core.base_schema import AuthSchema, BatchSetAvailable
 from app.core.exceptions import CustomException
 from app.core.logger import logger
 from app.utils.common_util import traversal_to_tree
 from app.utils.excel_util import ExcelUtil
 from app.utils.hash_bcrpy_util import PwdUtil
+from app.utils.upload_util import UploadUtil
 
 from .crud import UserCRUD
 from .schema import (
@@ -271,45 +273,93 @@ class UserService:
         }
 
         try:
+            UploadUtil.check_file_size(file)
             contents = await file.read()
-            df = pd.read_excel(io.BytesIO(contents))
+            if len(contents) > settings.MAX_FILE_SIZE:
+                raise CustomException(
+                    msg=f"文件大小超过限制，最大允许 {settings.MAX_FILE_SIZE // (1024 * 1024)}MB"
+                )
             await file.close()
 
-            if df.empty:
+            try:
+                workbook = load_workbook(io.BytesIO(contents), data_only=True)
+            except Exception as read_err:
+                raise CustomException(msg="导入文件解析失败，请上传有效的 Excel 文件") from read_err
+
+            worksheet = workbook.active
+            if worksheet is None:
                 raise CustomException(msg="导入文件为空")
 
-            missing_headers = [header for header in header_dict if header not in df.columns]
+            rows_iter = worksheet.iter_rows(values_only=True)
+            header_row = next(rows_iter, None)
+            if not header_row or all(c is None for c in header_row):
+                raise CustomException(msg="导入文件为空")
+
+            headers = [str(c).strip() if c is not None else "" for c in header_row]
+            missing_headers = [header for header in header_dict if header not in headers]
             if missing_headers:
                 raise CustomException(msg=f"导入文件缺少必要的列: {', '.join(missing_headers)}")
 
-            df.rename(columns=header_dict, inplace=True)
+            col_indices = {header_dict[h]: headers.index(h) for h in header_dict}
+
+            # 遍历数据行，过滤全空行
+            data_rows: list[tuple[int, tuple[Any, ...]]] = []
+            for row_idx, row in enumerate(rows_iter, start=2):
+                if any(c is not None and str(c).strip() != "" for c in row):
+                    data_rows.append((row_idx, row))
+
+            if not data_rows:
+                raise CustomException(msg="导入文件为空")
 
             success_count = 0
             errors = []
             gender_codes = {"男": "0", "女": "1", "未知": "2", "0": "0", "1": "1", "2": "2"}
+            default_password_hash = PwdUtil.hash_password(password="123456")
 
-            for row_number, (_, row) in enumerate(df.iterrows(), start=2):
+            def _get_val(current_row: tuple[Any, ...], field_name: str) -> Any:
+                idx = col_indices[field_name]
+                return current_row[idx] if idx < len(current_row) else None
+
+            for row_number, row in data_rows:
                 try:
-                    username = str(row["username"]).strip() if pd.notna(row["username"]) else ""
-                    name = str(row["name"]).strip() if pd.notna(row["name"]) else ""
+                    raw_user = _get_val(row, "username")
+                    raw_name = _get_val(row, "name")
+                    username = str(raw_user).strip() if raw_user is not None and str(raw_user).strip() not in ("", "None") else ""
+                    name = str(raw_name).strip() if raw_name is not None and str(raw_name).strip() not in ("", "None") else ""
                     if not username:
                         raise CustomException(msg="账号不能为空")
                     if not name:
                         raise CustomException(msg="昵称不能为空")
 
-                    gender = str(row["gender"]).strip() if pd.notna(row["gender"]) else "未知"
-                    if isinstance(row["gender"], (int, float)) and pd.notna(row["gender"]) and row["gender"] in (0, 1, 2):
-                        gender = str(int(row["gender"]))
+                    raw_gender = _get_val(row, "gender")
+                    gender = str(raw_gender).strip() if raw_gender is not None else "未知"
+                    if isinstance(raw_gender, (int, float)) and raw_gender in (0, 1, 2):
+                        gender = str(int(raw_gender))
+                    elif raw_gender is None or gender == "" or gender.lower() == "none":
+                        gender = "未知"
                     if gender not in gender_codes:
                         raise CustomException(msg="性别仅支持男、女、未知或编码 0、1、2")
+
+                    raw_email = _get_val(row, "email")
+                    raw_mobile = _get_val(row, "mobile")
+                    raw_status = _get_val(row, "status")
+
+                    email = str(raw_email).strip() if raw_email is not None and str(raw_email).strip() not in ("", "None") else None
+                    if isinstance(raw_mobile, float) and raw_mobile.is_integer():
+                        mobile = str(int(raw_mobile))
+                    else:
+                        mobile = str(raw_mobile).strip() if raw_mobile is not None and str(raw_mobile).strip() not in ("", "None") else None
+
+                    status_str = str(raw_status).strip() if raw_status is not None else ""
+                    status = 0 if status_str == "正常" else 1
 
                     user_data = {
                         "username": username,
                         "name": name,
-                        "email": str(row["email"]).strip() if pd.notna(row["email"]) else None,
-                        "mobile": str(row["mobile"]).strip() if pd.notna(row["mobile"]) else None,
+                        "email": email,
+                        "mobile": mobile,
                         "gender": gender_codes[gender],
-                        "status": 0 if str(row["status"]).strip() == "正常" else 1,
+                        "status": status,
                     }
 
                     async with self.auth.db.begin_nested():
@@ -324,7 +374,7 @@ class UserService:
                         else:
                             new_user_data = {
                                 **user_data,
-                                "password": PwdUtil.hash_password(password="123456"),
+                                "password": default_password_hash,
                             }
                             user_create_schema = UserCreateSchema(**new_user_data)
                             user_create_data = user_create_schema.model_dump(exclude_unset=True, exclude={"role_ids"})

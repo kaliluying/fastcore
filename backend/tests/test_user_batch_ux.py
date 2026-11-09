@@ -221,6 +221,14 @@ async def test_numeric_or_blank_gender_follows_schema(batch_auth, gender, expect
     assert (await auth.db.scalar(select(UserModel))).gender == expected
 
 
+async def test_batch_import_rejects_oversized_file(batch_auth, monkeypatch):
+    auth, _ = batch_auth
+    monkeypatch.setattr(settings, "MAX_FILE_SIZE", 10)
+    upload = excel_upload([["oversized", "超大文件", None, None, "男", "正常"]])
+    with pytest.raises(CustomException, match="文件大小超过限制"):
+        await UserService(auth).batch_import(upload)
+
+
 @pytest.mark.parametrize("valid_rows, failed_rows, expected_message", [(1, 0, "导入用户成功"), (1, 1, "部分导入失败"), (0, 1, "导入用户失败")])
 async def test_import_controller_returns_counts_and_accurate_status(batch_auth, valid_rows, failed_rows, expected_message):
     auth, _ = batch_auth

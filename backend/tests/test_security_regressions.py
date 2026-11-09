@@ -97,6 +97,19 @@ def test_client_ip_only_trusts_forwarding_headers_from_configured_proxies(
     assert get_client_ip(request) == expected
 
 
+@pytest.mark.asyncio
+async def test_rate_limit_identifier_uses_trusted_client_ip(monkeypatch) -> None:
+    """Rate limiter keys must only trust client IP headers from configured proxies."""
+    from app.core.http_limit import rate_limit_identifier
+
+    monkeypatch.setattr(settings, "TRUSTED_PROXY_IPS", ["10.0.0.0/8"])
+    trusted_request = _request_with_client("10.0.0.1", "203.0.113.10")
+    assert await rate_limit_identifier(trusted_request) == "203.0.113.10:/"
+
+    untrusted_request = _request_with_client("198.51.100.10", "203.0.113.10")
+    assert await rate_limit_identifier(untrusted_request) == "198.51.100.10:/"
+
+
 def test_oauth_frontend_redirect_is_allowlisted_and_ticket_only() -> None:
     """OAuth callbacks must not redirect to arbitrary origins or carry JWTs."""
     fallback = settings.OAUTH_FRONTEND_FALLBACK

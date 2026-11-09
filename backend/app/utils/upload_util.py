@@ -581,18 +581,6 @@ class UploadUtil:
                 raise
             raise CustomException(msg="文件上传失败，请稍后重试") from e
 
-    @staticmethod
-    def get_file_tree(file_path: str) -> list[dict]:
-        """获取文件树结构。
-
-        Args:
-            file_path (str): 文件路径。
-
-        Returns:
-            list[dict]: 文件树列表。
-        """
-        return [{"name": item.name, "is_dir": item.is_dir()} for item in Path(file_path).iterdir()]
-
     @classmethod
     def download_file(cls, file_path: str) -> str:
         """下载文件，生成新的文件名。

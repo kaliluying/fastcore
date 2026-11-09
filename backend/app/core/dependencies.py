@@ -107,14 +107,14 @@ async def _try_sliding_refresh(redis: Redis, session_id: str) -> None:
     ttl = await RedisCURD(redis).ttl(
         key=f"{RedisInitKeyConfig.ACCESS_TOKEN.key}:{session_id}"
     )
-    if ttl > 0 and ttl < settings.ACCESS_TOKEN_EXPIRE_MINUTES // 2:
+    if ttl > 0 and ttl < settings.ACCESS_TOKEN_EXPIRE_SECONDS // 2:
         await RedisCURD(redis).expire(
             key=f"{RedisInitKeyConfig.ACCESS_TOKEN.key}:{session_id}",
-            expire=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
+            expire=settings.ACCESS_TOKEN_EXPIRE_SECONDS,
         )
         await RedisCURD(redis).expire(
             key=f"{RedisInitKeyConfig.REFRESH_TOKEN.key}:{session_id}",
-            expire=settings.REFRESH_TOKEN_EXPIRE_MINUTES,
+            expire=settings.REFRESH_TOKEN_EXPIRE_SECONDS,
         )
 
 
