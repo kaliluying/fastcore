@@ -352,8 +352,17 @@ class UserService:
                     else:
                         mobile = _clean_str(raw_mobile) or None
 
-                    status_str = _clean_str(_get_val(row, "status"))
-                    status = 0 if status_str in ("正常", "启用", "0") else 1
+                    raw_status = _get_val(row, "status")
+                    if not isinstance(raw_status, bool) and isinstance(raw_status, (int, float)) and raw_status in (0, 1):
+                        status = int(raw_status)
+                    else:
+                        status_str = _clean_str(raw_status)
+                        if status_str in ("正常", "启用", "0", ""):
+                            status = 0
+                        elif status_str in ("停用", "禁用", "1"):
+                            status = 1
+                        else:
+                            raise CustomException(msg="状态仅支持正常、停用或编码 0、1")
 
                     user_data = {
                         "username": username,

@@ -207,19 +207,7 @@ class LoginService:
         auth = AuthSchema(db=db, check_data_scope=False)
         user = await UserCRUD(auth).get(username=login_form.username)
 
-        if not user:
-            failure_count = await _record_login_failure(redis, _login_username, request_ip)
-            await _write_login_log(
-                db=db,
-                username=_login_username,
-                status=2,
-            )
-            raise CustomException(
-                msg=_locked_message() if failure_count >= settings.LOGIN_MAX_FAILURES else "账号或密码错误",
-                status_code=429 if failure_count >= settings.LOGIN_MAX_FAILURES else 401,
-            )
-
-        if not PwdUtil.verify_password(plain_password=login_form.password, password_hash=user.password):
+        if not user or not PwdUtil.verify_password(plain_password=login_form.password, password_hash=user.password):
             failure_count = await _record_login_failure(redis, _login_username, request_ip)
             await _write_login_log(
                 db=db,
@@ -250,8 +238,6 @@ class LoginService:
         await _clear_login_failures(redis, _login_username, request_ip)
         await UserCRUD(auth).update_last_login(id=user.id)
 
-        if not user:
-            raise CustomException(msg="用户不存在")
         if not login_form.login_type:
             raise CustomException(msg="登录类型不能为空")
 

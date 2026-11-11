@@ -168,10 +168,14 @@ async def _load_user_from_db(db: AsyncSession, username: str | None = None, *, u
     return user
 
 
-async def _load_authenticated_user(user_id: int):
-    """使用短只读会话，避免请求回滚导致认证对象属性过期。"""
+async def _load_authenticated_user(user_id: int, db: AsyncSession | None = None):
+    """加载认证用户并脱离会话，避免请求回滚导致认证对象属性过期。"""
     if not isinstance(user_id, int) or isinstance(user_id, bool) or user_id <= 0:
         raise CustomException(msg="认证已失效", code=10401, status_code=401)
+    if db is not None:
+        user = await _load_user_from_db(db, user_id=user_id)
+        db.expunge_all()
+        return user
     async with async_db_session() as auth_db:
         return await _load_user_from_db(auth_db, user_id=user_id)
 
@@ -222,7 +226,7 @@ async def get_current_user(
     await _check_token_online(redis, session_id)
     await _try_sliding_refresh(redis, session_id)
 
-    user = await _load_authenticated_user(user_info.get("user_id"))
+    user = await _load_authenticated_user(user_info.get("user_id"), db=db)
     verify_session_credentials(user_info, user.id, user.password)
     permission_map = _build_permission_map(user)
 
@@ -253,7 +257,7 @@ async def _verify_session(session_id: str, db: AsyncSession, redis: Redis) -> Au
         user_info = json.loads(session_raw)
     except (TypeError, json.JSONDecodeError):
         raise CustomException(msg="认证已失效", code=10401, status_code=401)
-    user = await _load_authenticated_user(user_info.get("user_id"))
+    user = await _load_authenticated_user(user_info.get("user_id"), db=db)
     verify_session_credentials(user_info, user.id, user.password)
     auth = AuthSchema(db=db, redis=redis, permission_map=_build_permission_map(user), check_data_scope=False, session_id=session_id)
     auth.user = user

@@ -1,19 +1,13 @@
 ﻿from sqlalchemy import Integer, String, Text
+from sqlalchemy.dialects.mysql import LONGTEXT
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.config.setting import settings
 from app.core.base_model import ModelMixin, UserMixin
 
 
 def get_log_text_column_type():
-    """根据数据库类型选择适合存储大文本的列类型。"""
-    db_type = settings.DATABASE_TYPE
-    if db_type == "mysql":
-        from sqlalchemy.dialects.mysql import LONGTEXT
-
-        return LONGTEXT
-    else:
-        return Text
+    """根据数据库类型选择适合存储大文本的列类型（MySQL 使用 LONGTEXT，其他方言回退为 Text）。"""
+    return Text().with_variant(LONGTEXT, "mysql")
 
 
 class LoginLogModel(ModelMixin, UserMixin):

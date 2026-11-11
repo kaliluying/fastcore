@@ -1,7 +1,8 @@
 import { defineConfig } from "vitest/config";
 import vue from "@vitejs/plugin-vue";
 import path from "node:path";
-import { name, version } from "./package.json";
+import pkg from "./package.json" with { type: "json" };
+const { name, version } = pkg;
 
 export default defineConfig({
   plugins: [vue()],
@@ -12,16 +13,16 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "src"),
-      "@views": path.resolve(__dirname, "src/views"),
-      "@imgs": path.resolve(__dirname, "src/assets/images"),
-      "@icons": path.resolve(__dirname, "src/assets/images/svg"),
-      "@utils": path.resolve(__dirname, "src/utils"),
-      "@stores": path.resolve(__dirname, "src/store"),
-      "@plugins": path.resolve(__dirname, "src/plugins"),
-      "@styles": path.resolve(__dirname, "src/styles"),
-      "@api": path.resolve(__dirname, "src/api"),
-      "@fa_imgs": path.resolve(__dirname, "src/assets/fa_imgs"),
+      "@": path.resolve(import.meta.dirname, "src"),
+      "@views": path.resolve(import.meta.dirname, "src/views"),
+      "@imgs": path.resolve(import.meta.dirname, "src/assets/images"),
+      "@icons": path.resolve(import.meta.dirname, "src/assets/images/svg"),
+      "@utils": path.resolve(import.meta.dirname, "src/utils"),
+      "@stores": path.resolve(import.meta.dirname, "src/store"),
+      "@plugins": path.resolve(import.meta.dirname, "src/plugins"),
+      "@styles": path.resolve(import.meta.dirname, "src/styles"),
+      "@api": path.resolve(import.meta.dirname, "src/api"),
+      "@fa_imgs": path.resolve(import.meta.dirname, "src/assets/fa_imgs"),
     },
   },
   test: {

@@ -93,7 +93,7 @@ class RequestLogMiddleware(BaseHTTPMiddleware):
             return response
         except CustomException as e:
             logger.exception(f"中间件异常: {e!s}")
-            return ErrorResponse(msg="系统异常，请联系管理员")
+            return ErrorResponse(msg=e.msg, code=e.code, status_code=e.status_code)
 
 
 class CustomGZipMiddleware(GZipMiddleware):

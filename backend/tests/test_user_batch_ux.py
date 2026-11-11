@@ -221,13 +221,20 @@ async def test_numeric_or_blank_gender_follows_schema(batch_auth, gender, expect
     assert (await auth.db.scalar(select(UserModel))).gender == expected
 
 
-@pytest.mark.parametrize("status_val, expected_status", [("正常", 0), ("启用", 0), ("0", 0), ("停用", 1), ("1", 1), ("禁用", 1)])
+@pytest.mark.parametrize("status_val, expected_status", [("正常", 0), ("启用", 0), ("0", 0), ("停用", 1), ("1", 1), ("禁用", 1), (None, 0), ("", 0), (0, 0), (1, 1), (0.0, 0), (1.0, 1)])
 async def test_batch_import_status_formats(batch_auth, status_val, expected_status):
     auth, _ = batch_auth
     result = await UserService(auth).batch_import(excel_upload([["status_user", "状态测试", None, None, "男", status_val]]))
     assert result["success_count"] == 1
     assert (await auth.db.scalar(select(UserModel))).status == expected_status
 
+
+async def test_batch_import_invalid_status_reports_error(batch_auth):
+    auth, _ = batch_auth
+    result = await UserService(auth).batch_import(excel_upload([["invalid_status_user", "非法状态测试", None, None, "男", "非法状态"]]))
+    assert result["success_count"] == 0
+    assert result["failed_count"] == 1
+    assert "状态仅支持正常、停用或编码 0、1" in result["errors"][0]["message"]
 
 
 async def test_batch_import_rejects_oversized_file(batch_auth, monkeypatch):

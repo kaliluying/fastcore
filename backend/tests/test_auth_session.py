@@ -285,3 +285,107 @@ async def test_auto_login_token_is_consumed_before_session_creation() -> None:
     with pytest.raises(CustomException) as replay_error:
         await AutoLoginService.auto_login(request, redis, FakeDb(), token)
     assert replay_error.value.msg == "免登录Token已过期或无效"
+
+
+@pytest.mark.asyncio
+async def test_missing_user_login_logs_client_details(monkeypatch) -> None:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from app.api.v1.module_system.auth import service as auth_service
+    from app.config.setting import settings
+
+    request = SimpleNamespace(
+        headers={"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/120.0.0.0"},
+        client=SimpleNamespace(host="203.0.113.195"),
+        state=SimpleNamespace(),
+    )
+    redis = FakeRedis()
+    logged_calls = []
+
+    async def record_login_log(**kwargs):
+        logged_calls.append(kwargs)
+
+    async def missing_user(self, **_: object):
+        return None
+
+    monkeypatch.setattr(auth_service.UserCRUD, "get", missing_user)
+    monkeypatch.setattr(auth_service, "_write_login_log", record_login_log)
+    monkeypatch.setattr(settings, "CAPTCHA_ENABLE", False)
+
+    login_form = SimpleNamespace(
+        username="nonexistent_user",
+        password="any_password",
+        login_type="PC端",
+        captcha_key=None,
+        captcha=None,
+    )
+
+    with pytest.raises(CustomException) as exc:
+        await LoginService.authenticate_user(request, redis, login_form, AsyncSession())
+
+    assert exc.value.status_code == 401
+    assert len(logged_calls) == 1
+    log_record = logged_calls[0]
+    assert log_record["username"] == "nonexistent_user"
+    assert log_record["status"] == 2
+    assert log_record["login_ip"] == "203.0.113.195"
+    assert log_record["msg"] == "账号或密码错误"
+
+
+@pytest.mark.asyncio
+async def test_load_authenticated_user_reuses_request_session(monkeypatch) -> None:
+    from app.core import dependencies
+
+    expunged = False
+    new_session_called = False
+
+    class FakeSession:
+        def expunge_all(self):
+            nonlocal expunged
+            expunged = True
+
+    async def fake_load_from_db(db, user_id=None):
+        return SimpleNamespace(id=user_id, status=0)
+
+    def fake_async_db_session():
+        nonlocal new_session_called
+        new_session_called = True
+        raise AssertionError("should not open new session when db is provided")
+
+    monkeypatch.setattr(dependencies, "_load_user_from_db", fake_load_from_db)
+    monkeypatch.setattr(dependencies, "async_db_session", fake_async_db_session)
+
+    session = FakeSession()
+    user = await dependencies._load_authenticated_user(42, db=session)
+    assert user.id == 42
+    assert expunged is True
+    assert new_session_called is False
+
+
+@pytest.mark.asyncio
+async def test_request_log_middleware_preserves_custom_exception() -> None:
+    from starlette.requests import Request
+
+    from app.core.middlewares import RequestLogMiddleware
+
+    async def failing_app(scope, receive, send):
+        raise CustomException(msg="业务自定义拒绝", code=10403, status_code=403)
+
+    middleware = RequestLogMiddleware(failing_app)
+    req = Request(scope={
+        "type": "http",
+        "method": "GET",
+        "path": "/api/v1/test",
+        "headers": [],
+        "query_string": b"",
+        "server": ("testserver", 80),
+    })
+
+    async def call_next(request):
+        raise CustomException(msg="业务自定义拒绝", code=10403, status_code=403)
+
+    response = await middleware.dispatch(req, call_next)
+    assert response.status_code == 403
+    body = json.loads(response.body.decode("utf-8"))
+    assert body["code"] == 10403
+    assert body["msg"] == "业务自定义拒绝"
