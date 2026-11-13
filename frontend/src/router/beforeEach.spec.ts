@@ -21,8 +21,6 @@ vi.mock("@utils", () => ({
   loadingService: { showLoading: vi.fn(), hideLoading: vi.fn() },
   ApiStatus: { unauthorized: 401 },
   isHttpError: () => false,
-  resetStorageInvalidated: vi.fn(),
-  checkStorageInvalidated: () => false,
 }));
 vi.mock("@/hooks/core/useCommon", () => ({ useCommon: () => ({ homePath: { value: "/home" } }) }));
 vi.mock("./MenuProcessor", () => ({

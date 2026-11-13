@@ -25,16 +25,11 @@ import { createI18n } from "vue-i18n";
 import type { I18n, I18nOptions } from "vue-i18n";
 import type { App } from "vue";
 import { LanguageEnum } from "@/enums/appEnum";
-import { StorageKeyManager } from "@utils/storage";
+import { USER_STORE_PERSIST_KEY } from "@/store/modules/userPersistence";
 
 // 同步导入语言文件
 import enMessages from "./langs/en.json";
 import zhMessages from "./langs/zh.json";
-
-/**
- * 存储键管理器实例
- */
-const storageKeyManager = new StorageKeyManager();
 
 /**
  * 语言消息对象
@@ -58,10 +53,8 @@ export const languageOptions = [
  * @returns 语言设置，如果获取失败则返回默认语言
  */
 const getDefaultLanguage = (): LanguageEnum => {
-  // 尝试从版本化的存储中获取语言设置
   try {
-    const storageKey = storageKeyManager.getStorageKey("user");
-    const userStore = localStorage.getItem(storageKey);
+    const userStore = localStorage.getItem(USER_STORE_PERSIST_KEY);
 
     if (userStore) {
       const { language } = JSON.parse(userStore);
@@ -70,7 +63,7 @@ const getDefaultLanguage = (): LanguageEnum => {
       }
     }
   } catch (error) {
-    console.warn("[i18n] 从版本化存储获取语言设置失败:", error);
+    console.warn("[i18n] 获取语言设置失败:", error);
   }
 
   // 返回默认语言

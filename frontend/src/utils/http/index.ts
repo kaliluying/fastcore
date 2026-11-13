@@ -252,8 +252,12 @@ request.interceptors.response.use(
     const data = response.data;
 
     if (data.code !== ResultEnum.SUCCESS) {
-      ElMessage.error(data.msg);
-      return Promise.reject(response);
+      if (shouldShowErrorMessage(response.config)) {
+        ElMessage.error(data.msg);
+      }
+      return Promise.reject(
+        createHttpError(data.msg || "请求失败", data.code, data, response.config)
+      );
     }
 
     if (

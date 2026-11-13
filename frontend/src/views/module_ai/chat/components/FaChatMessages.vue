@@ -115,18 +115,20 @@ const scrollToMessage = (messageId: string) => {
 };
 
 watch(
-  () => props.messages,
-  (newVal, oldVal) => {
-    const lastMsg = newVal[newVal.length - 1];
-    if (newVal.length !== oldVal?.length && lastMsg?.type === "user") {
+  () => {
+    const last = props.messages[props.messages.length - 1];
+    return [props.messages.length, last?.type, last?.content?.length] as const;
+  },
+  ([newLen, newType], oldVal) => {
+    const oldLen = oldVal?.[0];
+    if (newLen !== oldLen && newType === "user") {
       scrollToBottom(true);
       return;
     }
     if (!isUserScrolledUp.value) {
       scrollToBottom(false);
     }
-  },
-  { deep: true }
+  }
 );
 
 const handlePromptClick = (prompt: string) => {

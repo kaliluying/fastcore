@@ -94,7 +94,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, onActivated, onDeactivated, onMounted, onUnmounted, ref } from "vue";
 import { usePreferredReducedMotion, useResizeObserver } from "@vueuse/core";
 import { useSettingsStore } from "@stores";
 import { ApiStatus, getCssVar, HttpError } from "@utils";
@@ -111,6 +111,7 @@ const trendItems = ref<LoginTrendItem[]>([]);
 const loading = ref(false);
 const hasLoaded = ref(false);
 const trendError = ref("");
+const isAuthBlocked = ref(false);
 const preferredMotion = usePreferredReducedMotion();
 const reducedMotion = computed(() => preferredMotion.value === "reduce");
 const trendChart = ref<HTMLElement>();
@@ -174,6 +175,7 @@ async function loadTrend(): Promise<void> {
 
   loading.value = true;
   trendError.value = "";
+  isAuthBlocked.value = false;
   try {
     const response = await DashboardAPI.getLoginTrend();
     const items = response.data.data?.items;
@@ -183,6 +185,13 @@ async function loadTrend(): Promise<void> {
   } catch (error: unknown) {
     trendItems.value = [];
     trendError.value = getTrendErrorMessage(error);
+    if (
+      error instanceof HttpError &&
+      (error.code === ApiStatus.forbidden || error.code === ApiStatus.unauthorized)
+    ) {
+      isAuthBlocked.value = true;
+      stopTimer();
+    }
   } finally {
     loading.value = false;
   }
@@ -190,13 +199,38 @@ async function loadTrend(): Promise<void> {
 
 let refreshTimer: number | undefined;
 
+function startTimer() {
+  stopTimer();
+  if (isAuthBlocked.value) {
+    return;
+  }
+  refreshTimer = window.setInterval(() => void loadTrend(), REFRESH_INTERVAL);
+}
+
+function stopTimer() {
+  if (refreshTimer !== undefined) {
+    window.clearInterval(refreshTimer);
+    refreshTimer = undefined;
+  }
+}
+
 onMounted(() => {
   void loadTrend();
-  refreshTimer = window.setInterval(() => void loadTrend(), REFRESH_INTERVAL);
+  startTimer();
+});
+
+onActivated(() => {
+  if (hasLoaded.value) {
+    startTimer();
+  }
+});
+
+onDeactivated(() => {
+  stopTimer();
 });
 
 onUnmounted(() => {
-  if (refreshTimer !== undefined) window.clearInterval(refreshTimer);
+  stopTimer();
 });
 </script>
 

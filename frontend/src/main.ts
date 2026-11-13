@@ -13,10 +13,9 @@ import { printConsoleBanner, startVersionCheck } from "@utils";
 import { initPlugins } from "@/plugins";
 
 /**
- * iOS Safari 中 touch 事件默认是 passive 的，导致 `:active` CSS 伪类不生效。
- * 注册一个空的 `touchstart` 监听（非 passive）来激活 `:active` 响应。
+ * iOS Safari 中支持 `:active` CSS 伪类响应，同时显式声明 `{ passive: true }` 避免滚动性能损耗。
  */
-document.addEventListener("touchstart", function () {}, { passive: false });
+document.addEventListener("touchstart", function () {}, { passive: true });
 
 /** 启动顺序：
  *  1. printConsoleBanner  —— 控制台欢迎信息（无依赖）

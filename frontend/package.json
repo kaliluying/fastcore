@@ -22,7 +22,6 @@
     "npm:check": "pnpx npm-check-updates -u",
     "clean:cache": "pnpx rimraf node_modules/.cache node_modules/.vite",
     "prepare": "cd .. && husky frontend/.husky",
-    "icon": "esno ./scripts/icon.ts",
     "preview": "vite preview",
     "type-check": "vue-tsc --noEmit",
     "test": "vitest run",
@@ -95,7 +94,6 @@
     "exceljs": "^4.4.0",
     "highlight.js": "^11.12.0",
     "markdown-it": "^15.0.2",
-    "markdown-it-highlightjs": "^4.3.0",
     "mitt": "^3.0.1",
     "nprogress": "^0.2.0",
     "pinia": "^4.0.3",
@@ -161,7 +159,6 @@
     "vite-plugin-vue-devtools": "^8.2.1",
     "vitest": "^5.0.4",
     "vue-eslint-parser": "^10.4.1",
-    "vue-img-cutter": "^3.1.1",
     "vue-tsc": "^3.3.13"
   },
   "packageManager": "pnpm@12.11.2",

@@ -542,7 +542,7 @@ const handleSelectSession = async (
     error.value = "";
     messages.value = [];
     const feedbackByRun = new Map(
-      feedback?.data.data.items.map((item) => [item.run_id, item]) || []
+      feedback?.data?.data?.items?.map((item) => [item.run_id, item]) ?? []
     );
 
     runs.forEach((run: any) => {

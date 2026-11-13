@@ -183,26 +183,24 @@ export const createSmartDebounce = <T extends (...args: any[]) => Promise<any>>(
 ): T & { cancel: () => void; flush: () => Promise<any> } => {
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
   let lastArgs: Parameters<T> | null = null;
-  let lastResolve: ((value: any) => void) | null = null;
-  let lastReject: ((reason: any) => void) | null = null;
+  let waiters: Array<{ resolve: (value: any) => void; reject: (reason: any) => void }> = [];
 
   const debouncedFn = (...args: Parameters<T>): Promise<any> => {
     return new Promise((resolve, reject) => {
       if (timeoutId) clearTimeout(timeoutId);
       lastArgs = args;
-      lastResolve = resolve;
-      lastReject = reject;
+      waiters.push({ resolve, reject });
       timeoutId = setTimeout(async () => {
+        const currentWaiters = waiters;
+        const currentArgs = lastArgs;
+        waiters = [];
+        timeoutId = null;
+        lastArgs = null;
         try {
-          const result = await fn(...args);
-          resolve(result);
+          const result = await fn(...(currentArgs as Parameters<T>));
+          currentWaiters.forEach((w) => w.resolve(result));
         } catch (error) {
-          reject(error);
-        } finally {
-          timeoutId = null;
-          lastArgs = null;
-          lastResolve = null;
-          lastReject = null;
+          currentWaiters.forEach((w) => w.reject(error));
         }
       }, delay);
     });
@@ -212,27 +210,26 @@ export const createSmartDebounce = <T extends (...args: any[]) => Promise<any>>(
     if (timeoutId) clearTimeout(timeoutId);
     timeoutId = null;
     lastArgs = null;
-    lastResolve = null;
-    lastReject = null;
+    const currentWaiters = waiters;
+    waiters = [];
+    currentWaiters.forEach((w) => w.reject(new Error("Debounce cancelled")));
   };
 
   debouncedFn.flush = async () => {
-    if (timeoutId && lastArgs && lastResolve && lastReject) {
+    if (timeoutId && lastArgs && waiters.length) {
       clearTimeout(timeoutId);
       timeoutId = null;
-      const args = lastArgs;
-      const resolve = lastResolve;
-      const reject = lastReject;
+      const currentWaiters = waiters;
+      const currentArgs = lastArgs;
+      waiters = [];
       lastArgs = null;
-      lastResolve = null;
-      lastReject = null;
 
       try {
-        const result = await fn(...args);
-        resolve(result);
+        const result = await fn(...(currentArgs as Parameters<T>));
+        currentWaiters.forEach((w) => w.resolve(result));
         return result;
       } catch (error) {
-        reject(error);
+        currentWaiters.forEach((w) => w.reject(error));
         throw error;
       }
     }

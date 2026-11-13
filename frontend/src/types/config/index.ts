@@ -54,37 +54,6 @@ export interface MenuLayout {
   description?: string;
 }
 
-/** 节日配置 */
-export interface FestivalConfig {
-  /** 节日日期（单日）或开始日期（日期范围） */
-  date: string;
-  /** 节日结束日期（可选，用于跨日期节日） */
-  endDate?: string;
-  /** 节日名称 */
-  name: string;
-  /** 烟花图片 */
-  image: string;
-  /** 滚动文本 */
-  scrollText: string;
-  /** 是否激活 */
-  isActive?: boolean;
-  /** 烟花播放次数（可选，默认为 3 次） */
-  count?: number;
-  /**
-   * 礼花连发间隔（毫秒）。不填默认 1000。可改小以营造连续绽放感（如雪花「暴风」）。
-   */
-  fireworkInterval?: number;
-  /**
-   * 为 true 时不放烟花，进入系统后直接显示 `scrollText`（适合长期顶栏公告）
-   * 多条时间重叠时优先使用日期区间更短的那条
-   */
-  skipFireworks?: boolean;
-  /**
-   * 常驻兜底公告（如全年系统提示）。匹配优先级最低：**普通节日 > 周末提示 > 常驻**
-   */
-  isResidentBanner?: boolean;
-}
-
 /** 系统基础配置 */
 export interface SystemBasicConfig {
   /** 系统名称 */

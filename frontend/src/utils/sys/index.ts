@@ -14,7 +14,6 @@ export function printConsoleBanner(): void {
 // -----------------------------
 
 type SysEvents = {
-  triggerFireworks: string | undefined;
   openSearchDialog: void;
 };
 
@@ -98,99 +97,4 @@ export function initErrorHandle(app: App) {
   window.onerror = scriptErrorHandler;
   registerPromiseErrorHandler();
   registerResourceErrorHandler();
-}
-
-// -----------------------------
-// 版本升级
-// -----------------------------
-
-/**
- * 版本升级管理器。
- *
- * ── 检测逻辑 ──
- * 1. 跳过 1.0.0 版本（无需升级的基版本）
- * 2. 首次访问 → 写入当前版本号，不升级
- * 3. 版本相同 → 无需升级
- * 4. 版本不同 + 存在旧数据 → 清理旧 key
- * 5. 版本不同 + 无旧数据 → 仅更新版本号
- */
-class VersionManager {
-  private getStoredVersion(): string | null {
-    return localStorage.getItem(StorageConfig.VERSION_KEY);
-  }
-
-  private setStoredVersion(version: string): void {
-    localStorage.setItem(StorageConfig.VERSION_KEY, version);
-  }
-
-  private shouldSkipUpgrade(): boolean {
-    return StorageConfig.CURRENT_VERSION === StorageConfig.SKIP_UPGRADE_VERSION;
-  }
-
-  private isFirstVisit(storedVersion: string | null): boolean {
-    return !storedVersion;
-  }
-
-  private isSameVersion(storedVersion: string): boolean {
-    return storedVersion === StorageConfig.CURRENT_VERSION;
-  }
-
-  private findLegacyStorage(): string[] {
-    const storageKeys = Object.keys(localStorage);
-    return storageKeys.filter(
-      (key) => StorageConfig.isVersionedKey(key) && !StorageConfig.isCurrentVersionKey(key)
-    );
-  }
-
-  private cleanupLegacyData(oldVersionKeys: string[]): void {
-    oldVersionKeys.forEach((key) => {
-      localStorage.removeItem(key);
-      console.info(`[Upgrade] 已清理旧存储: ${key}`);
-    });
-  }
-
-  private executeUpgrade(storedVersion: string, oldVersionKeys: string[]): void {
-    this.cleanupLegacyData(oldVersionKeys);
-    this.setStoredVersion(StorageConfig.CURRENT_VERSION);
-    console.info(`[Storage] 已清理旧版本数据: ${storedVersion} → ${StorageConfig.CURRENT_VERSION}`);
-  }
-
-  async processUpgrade(): Promise<void> {
-    if (this.shouldSkipUpgrade()) {
-      console.debug("[Upgrade] 跳过版本升级检查");
-      return;
-    }
-
-    const storedVersion = this.getStoredVersion();
-    if (this.isFirstVisit(storedVersion)) {
-      this.setStoredVersion(StorageConfig.CURRENT_VERSION);
-      console.info("[Upgrade] 首次访问，已设置当前版本");
-      return;
-    }
-
-    if (this.isSameVersion(storedVersion!)) {
-      console.debug("[Upgrade] 版本相同，无需升级");
-      return;
-    }
-
-    const oldVersionKeys = this.findLegacyStorage();
-    if (oldVersionKeys.length === 0) {
-      this.setStoredVersion(StorageConfig.CURRENT_VERSION);
-      console.info("[Upgrade] 无旧数据，已更新版本号");
-      return;
-    }
-
-    this.executeUpgrade(storedVersion!, oldVersionKeys);
-  }
-}
-
-export async function processUpgrade(): Promise<void> {
-  const versionManager = new VersionManager();
-  await versionManager.processUpgrade();
-}
-
-export function systemUpgrade(): void {
-  setTimeout(() => {
-    void processUpgrade();
-  }, StorageConfig.UPGRADE_DELAY);
 }

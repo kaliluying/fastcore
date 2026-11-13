@@ -12,87 +12,12 @@
  * @module utils/common
  */
 
-import { reactive, toRefs } from "vue";
-import { tryOnMounted, tryOnUnmounted } from "@vueuse/core";
 import dayjs from "dayjs";
 import { ElMessage } from "element-plus";
 
 /**
- * 根据当前时间生成问候语
- *
- * 根据当前小时返回不同的问候语，支持中文问候和特殊时段的温馨提示
- *
- * @returns {string} 问候语字符串
- *
- * @example
- * ```typescript
- * const greeting = greetings();
- * console.log(greeting); // 输出："上午好！" 或其他时段的问候语
- * ```
- */
-export function greetings(): string {
-  const currentDate = new Date();
-  const hours = currentDate.getHours();
-
-  if (hours >= 6 && hours < 8) {
-    return "晨起披衣出草堂，轩窗已自喜微凉🌅！";
-  } else if (hours >= 8 && hours < 12) {
-    return "上午好！";
-  } else if (hours >= 12 && hours < 14) {
-    return "中午好！";
-  } else if (hours >= 14 && hours < 18) {
-    return "下午好！";
-  } else if (hours >= 18 && hours < 24) {
-    return "晚上好！";
-  } else {
-    return "偷偷向银河要了一把碎星，只等你闭上眼睛撒入你的梦中，晚安🌛！";
-  }
-}
-
-/**
- * 获取日期范围内的所有日期
- *
- * 根据起始日期和结束日期，生成期间所有日期的字符串数组
- * 使用 dayjs 简化日期计算逻辑
- *
- * @param startDate - 起始日期
- * @param endDate - 结束日期
- * @returns 日期字符串数组，格式为 YYYY-MM-DD
- *
- * @example
- * ```typescript
- * const dates = getRangeDate('2024-01-30', '2024-02-02');
- * // 输出：['2024-01-30', '2024-01-31', '2024-02-01', '2024-02-02']
- * ```
- */
-export function getRangeDate(
-  startDate: string | number | Date,
-  endDate: string | number | Date
-): string[] {
-  const start = dayjs(startDate);
-  const end = dayjs(endDate);
-  const dates: string[] = [];
-
-  // 验证日期有效性
-  if (!start.isValid() || !end.isValid()) {
-    return dates;
-  }
-
-  // 确保 start <= end
-  const [actualStart, actualEnd] = start.isAfter(end) ? [end, start] : [start, end];
-
-  let current = actualStart;
-  while (current.isBefore(actualEnd) || current.isSame(actualEnd, "day")) {
-    dates.push(current.format("YYYY-MM-DD"));
-    current = current.add(1, "day");
-  }
-
-  return dates;
-}
-
-/**
  * 树形节点基础接口
- * 用于 listToTree 和 formatTree 函数
+ * 用于 formatTree 函数
  */
 export interface TreeNode {
   id?: string | number;
@@ -110,59 +35,6 @@ export interface CascaderNode {
   label: string;
   disabled: boolean;
   children?: CascaderNode[];
-}
-
-/**
- * 将扁平列表转换为树形结构
- *
- * 通过 parent_id 字段将扁平数组转换为嵌套的树形结构
- * 保留原始数据的所有字段
- *
- * @param list - 扁平列表数据，每个项必须包含 id 和 parent_id 字段
- * @returns 树形结构数组
- *
- * @example
- * ```typescript
- * const list = [
- *   { id: 1, name: '节点1', parent_id: null },
- *   { id: 2, name: '节点2', parent_id: 1 },
- * ];
- * const tree = listToTree(list);
- * // 输出：[{ id: 1, name: '节点1', parent_id: null, children: [{ id: 2, name: '节点2', parent_id: 1 }] }]
- * ```
- */
-export function listToTree<
-  T extends { id?: string | number; parent_id?: string | number | null; children?: T[] },
->(list: T[]): T[] {
-  const map = new Map<string | number, T>();
-  const tree: T[] = [];
-
-  // 创建映射表（过滤掉 id 为空的项）
-  for (const item of list) {
-    if (item.id != null) {
-      map.set(item.id, { ...item });
-    }
-  }
-
-  // 构建树形结构
-  for (const item of list) {
-    if (item.id == null) continue;
-
-    const node = map.get(item.id);
-    if (!node) continue;
-
-    const parentId = item.parent_id;
-
-    if (parentId != null && map.has(parentId)) {
-      const parent = map.get(parentId)!;
-      if (!parent.children) parent.children = [];
-      parent.children.push(node);
-    } else if (parentId == null) {
-      tree.push(node);
-    }
-  }
-
-  return tree;
 }
 
 /**
@@ -201,27 +73,6 @@ export function formatTree(nodes: TreeNode[]): CascaderNode[] {
   });
 }
 
-/**
- * 检查元素是否包含指定 CSS 类
- */
-export function hasClass(ele: HTMLElement, cls: string): boolean {
-  return ele.classList.contains(cls);
-}
-
-/**
- * 为元素添加 CSS 类
- */
-export function addClass(ele: HTMLElement, cls: string): void {
-  ele.classList.add(cls);
-}
-
-/**
- * 从元素移除 CSS 类
- */
-export function removeClass(ele: HTMLElement, cls: string): void {
-  ele.classList.remove(cls);
-}
-
 export function isExternal(path: string): boolean {
   return /^(https?:|http?:|mailto:|tel:)/.test(path);
 }
@@ -246,24 +97,6 @@ export function isEmpty(obj: string | null | undefined): boolean {
   return obj === undefined || obj === null || obj === "";
 }
 
-/**
- * 验证数据是否为 Blob 格式
- *
- * 通过检查 Content-Type 是否为 application/json 来判断
- *
- * @param {Blob} data - 需要验证的数据
- * @returns {boolean} 是否为 Blob 格式
- *
- * @example
- * ```typescript
- * const blob = new Blob(['test'], { type: 'text/plain' });
- * blobValidate(blob); // true
- * ```
- */
-export function blobValidate(data: Blob): boolean {
-  return data.type !== "application/json";
-}
-
 /** 日期辅助工具（dayjs）。 */
 
 const DATE_TIME_FORMAT = "YYYY-MM-DD HH:mm:ss";
@@ -280,68 +113,6 @@ export function formatToDateTime(
 export function formatToDate(date?: dayjs.ConfigType, format: string = DATE_FORMAT): string {
   return dayjs(date).format(format);
 }
-
-export function formatToTime(time?: dayjs.ConfigType, format: string = "HH:mm:ss"): string {
-  return dayjs(time).format(format);
-}
-
-export const useNow = (immediate: boolean = true) => {
-  let timer: ReturnType<typeof setInterval>;
-
-  const state = reactive({
-    year: 0,
-    month: 0,
-    week: "",
-    day: 0,
-    hour: "",
-    minute: "",
-    second: 0,
-    meridiem: "",
-  });
-
-  const update = () => {
-    const now = dayjs();
-
-    const h = now.format("HH");
-    const m = now.format("mm");
-    const s = now.get("s");
-
-    state.year = now.get("y");
-    state.month = now.get("M") + 1;
-    state.week = "星期" + ["日", "一", "二", "三", "四", "五", "六"][now.day()];
-    state.day = now.get("date");
-    state.hour = h;
-    state.minute = m;
-    state.second = s;
-    state.meridiem = now.format("A");
-  };
-
-  function start(): void {
-    update();
-    clearInterval(timer);
-    timer = setInterval(() => update(), 1000);
-  }
-
-  function stop(): void {
-    clearInterval(timer);
-  }
-
-  tryOnMounted(() => {
-    if (immediate) {
-      start();
-    }
-  });
-
-  tryOnUnmounted(() => {
-    stop();
-  });
-
-  return {
-    ...toRefs(state),
-    start,
-    stop,
-  };
-};
 
 /**
  * 分页数据全量获取工具

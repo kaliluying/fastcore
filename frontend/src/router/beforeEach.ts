@@ -32,8 +32,6 @@ import {
   loadingService,
   ApiStatus,
   isHttpError,
-  resetStorageInvalidated,
-  checkStorageInvalidated,
 } from "@utils";
 import { RouteRegistry } from "./core";
 import { MenuProcessor } from "./MenuProcessor";
@@ -164,14 +162,6 @@ async function handleRouteGuard(
     NProgress.start();
   }
 
-  // 检查存储是否已失效（storage/index.ts 检测到异常时标记）
-  if (checkStorageInvalidated()) {
-    console.info("[RouteGuard] 检测到存储已失效，执行登出");
-    await userStore.logout({ navigate: false });
-    resetStorageInvalidated();
-    return { name: "Login", replace: true };
-  }
-
   const loginRedirect = handleLoginStatus(to, userStore);
   if (loginRedirect) return loginRedirect;
 
@@ -243,36 +233,41 @@ function resolveStaticChildFullPath(parentFullPath: string, segment: string): st
   return `${parentFullPath.replace(/\/$/, "")}/${seg}`;
 }
 
-/**
- * 检查路由是否为静态路由
- */
-function isStaticRoute(path: string): boolean {
-  const checkRoute = (routes: any[], targetPath: string, parentFullPath = ""): boolean => {
-    return routes.some((route) => {
-      // 通配 404（pathMatch）不应视为免登录静态页；静态表里可能与 `/404` 同名，按 path 区分。
-      if (route.path === "/:pathMatch(.*)*") {
-        return false;
-      }
+let cachedStaticRoutesRef: any[] | null = null;
+let cachedStaticRouteRegexes: RegExp[] = [];
 
+function getStaticRouteRegexes(): RegExp[] {
+  if (cachedStaticRoutesRef === staticRoutes) {
+    return cachedStaticRouteRegexes;
+  }
+  cachedStaticRoutesRef = staticRoutes;
+  const regexes: RegExp[] = [];
+
+  const extractPatterns = (routes: any[], parentFullPath = "") => {
+    for (const route of routes) {
+      if (route.path === "/:pathMatch(.*)*") continue;
       const routePath = route.path ?? "";
       const fullPath = routePath.startsWith("/")
         ? routePath
         : resolveStaticChildFullPath(parentFullPath, routePath);
-
       const pattern = fullPath.replace(/:[^/]+/g, "[^/]+").replace(/\*/g, ".*");
-      const regex = new RegExp(`^${pattern}$`);
-
-      if (regex.test(targetPath)) {
-        return true;
-      }
+      regexes.push(new RegExp(`^${pattern}$`));
       if (route.children && route.children.length > 0) {
-        return checkRoute(route.children, targetPath, fullPath);
+        extractPatterns(route.children, fullPath);
       }
-      return false;
-    });
+    }
   };
 
-  return checkRoute(staticRoutes, path);
+  extractPatterns(staticRoutes);
+  cachedStaticRouteRegexes = regexes;
+  return regexes;
+}
+
+/**
+ * 检查路由是否为静态路由
+ */
+function isStaticRoute(path: string): boolean {
+  return getStaticRouteRegexes().some((regex) => regex.test(path));
 }
 
 /**
@@ -436,39 +431,6 @@ export class RoutePermissionValidator {
       return true;
     }
     return this.matchRoute(targetPath, menuList);
-  }
-
-  static buildMenuPathSet(
-    menuList: AppRouteRecord[],
-    pathSet: Set<string> = new Set()
-  ): Set<string> {
-    if (!Array.isArray(menuList) || menuList.length === 0) {
-      return pathSet;
-    }
-
-    for (const menuItem of menuList) {
-      if (!menuItem.path) {
-        continue;
-      }
-
-      const menuPath = menuItem.path.startsWith("/") ? menuItem.path : `/${menuItem.path}`;
-      pathSet.add(menuPath);
-
-      if (menuItem.children?.length) {
-        this.buildMenuPathSet(menuItem.children, pathSet);
-      }
-    }
-
-    return pathSet;
-  }
-
-  static checkPathPrefix(targetPath: string, pathSet: Set<string>): boolean {
-    for (const menuPath of pathSet) {
-      if (targetPath.startsWith(`${menuPath}/`)) {
-        return true;
-      }
-    }
-    return false;
   }
 
   static matchRoute(targetPath: string, routes: AppRouteRecord[]): boolean {

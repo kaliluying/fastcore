@@ -155,4 +155,14 @@ describe("login submission locking", () => {
     expect(wrapper.get('[role="alert"]').text()).toContain("\u672a\u914d\u7f6e");
     wrapper.unmount();
   });
+
+  it("sanitizes open-redirect targets like //evil.com to root path", async () => {
+    routeState.query = { redirect: "//evil.com" };
+    const wrapper = renderLogin();
+    await flushPromises();
+    await wrapper.get("button").trigger("click");
+    await flushPromises();
+    expect(replace).toHaveBeenCalledWith({ path: "/" });
+    wrapper.unmount();
+  });
 });

@@ -178,7 +178,10 @@ const rules = computed<FormRules>(() => {
 
 function resolveRedirectTarget(query: LocationQuery): RouteLocationRaw {
   const defaultPath = "/";
-  const rawRedirect = (query.redirect as string) || defaultPath;
+  const rawRedirect = typeof query.redirect === "string" ? query.redirect : defaultPath;
+  if (!rawRedirect.startsWith("/") || rawRedirect.startsWith("//") || rawRedirect.includes("://")) {
+    return { path: defaultPath };
+  }
   try {
     const resolved = router.resolve(rawRedirect);
     return {

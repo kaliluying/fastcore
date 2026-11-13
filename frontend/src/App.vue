@@ -14,7 +14,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeMount, onMounted, onUnmounted } from "vue";
+import { computed, onBeforeMount, onMounted } from "vue";
 import { useAppStore } from "./store";
 import { ComponentSize } from "./enums/settings/layout.enum";
 import { toggleTransition } from "./utils/ui";
@@ -22,7 +22,6 @@ import { initializeTheme } from "./hooks/core/useTheme";
 import { useAppBootstrap } from "@/hooks/core/useAppBootstrap";
 import en from "element-plus/es/locale/lang/en";
 import zhCn from "element-plus/es/locale/lang/zh-cn";
-import { router } from "@/router";
 
 const appStore = useAppStore();
 
@@ -43,29 +42,16 @@ const locale = computed(() => {
  *   2. initializeTheme()       —— 加载主题配色(CSS 变量)、暗色模式 class、auto 监听
  *
  * onMounted
- *   1. bootstrap()                                —— 存储检查 → 过渡恢复 → 版本升级 → 站点配置
- *   2. 监听 "app:storage-invalidated" 事件        —— 存储异常时由 storage 模块派发
+ *   1. bootstrap()             —— 过渡恢复 → 站点配置
  */
 onBeforeMount(() => {
   toggleTransition(true);
   initializeTheme();
 });
 
-// 存储失效时跳转登录页（由 storage 模块检测到异常后派发）
-const handleStorageInvalidated = () => {
-  router.push({ name: "Login" });
-};
-
 const { bootstrap } = useAppBootstrap();
 
 onMounted(() => {
   bootstrap();
-
-  // 存储检测到异常并已清除数据 → 由路由守卫完成登出清理
-  window.addEventListener("app:storage-invalidated", handleStorageInvalidated);
-});
-
-onUnmounted(() => {
-  window.removeEventListener("app:storage-invalidated", handleStorageInvalidated);
 });
 </script>

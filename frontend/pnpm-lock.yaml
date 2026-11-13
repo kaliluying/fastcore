@@ -227,9 +227,6 @@ importers:
       markdown-it:
         specifier: ^15.0.2
         version: 15.0.2
-      markdown-it-highlightjs:
-        specifier: ^4.3.0
-        version: 4.3.0
       mitt:
         specifier: ^3.0.1
         version: 3.0.1
@@ -420,9 +417,6 @@ importers:
       vue-eslint-parser:
         specifier: ^10.4.1
         version: 10.4.1(eslint@10.12.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)
-      vue-img-cutter:
-        specifier: ^3.1.1
-        version: 3.1.1(typescript@6.0.3)
       vue-tsc:
         specifier: ^3.3.13
         version: 3.3.13(typescript@6.0.3)
@@ -2011,9 +2005,6 @@ packages:
   convert-source-map@2.0.0:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
 
-  core-js@3.50.0:
-    resolution: {integrity: sha512-BRWgOLKkFeCgRudR6zrs8p9XJZcE14grzKMMssoYrk6krtuEZ7MTKPIY5RzOnqsEKIR9kst7wNzphttraT+Yqw==}
-
   core-util-is@1.0.3:
     resolution: {integrity: sha512-ZQBvi1DcpJ4GDqanjucZ2Hj3wEO5pZDS89BWbkcrvdxksJorwUDDZamX9ldFkp9aw2lmBDLgkObEA4DWNJ9FYQ==}
 
@@ -3223,9 +3214,6 @@ packages:
   magic-string@1.4.3:
     resolution: {integrity: sha512-z12OxmaPGE0F4xlpGdjuAUckipLpQlTAuAmyGhNoD7ODpYUzvDfvtxUbjM/jwznyP178oju/KDdyi220wNJ0RQ==}
 
-  markdown-it-highlightjs@4.3.0:
-    resolution: {integrity: sha512-dTEXpTV2J9WJiO8TA/FJ4DxidrYtTNcfBAdl+CLjQ3UFWj8s4dJyCPTcvoXNLmN5U5ZTCGu7TSkSvBvi4fUqkQ==}
-
   markdown-it@15.0.2:
     resolution: {integrity: sha512-q4IGxMv56jCqT4OCRCADBoDP3LO4MhmTXjFbphHPXs4g3j9Xg5RDnxqN8IF/3vIWEU+VCnUq+7JUg/cfy2E6Qw==}
     hasBin: true
@@ -4353,10 +4341,6 @@ packages:
     engines: {node: '>= 22'}
     peerDependencies:
       vue: ^3.0.0
-
-  vue-img-cutter@3.1.1:
-    resolution: {integrity: sha512-9n0jHJGS7YpakbUNg+VZdUudzRLfNTkI+vo1CnoSp0JlskXOSa5rRPiPS8nO1YSkDnBsiRwJeUM+TOaJy95HWw==}
-    engines: {node: '>=22.22.2'}
 
   vue-json-pretty@2.6.0:
     resolution: {integrity: sha512-glz1aBVS35EO8+S9agIl3WOQaW2cJZW192UVKTuGmryx01ZvOVWc4pR3t+5UcyY4jdOfBUgVHjcpRpcnjRhCAg==}
@@ -6083,8 +6067,6 @@ snapshots:
 
   convert-source-map@2.0.0: {}
 
-  core-js@3.50.0: {}
-
   core-util-is@1.0.3: {}
 
   cosmiconfig-typescript-loader@6.3.0(@types/node@26.6.5)(cosmiconfig@9.0.2(typescript@6.0.3))(typescript@6.0.3):
@@ -7343,10 +7325,6 @@ snapshots:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.6.0
 
-  markdown-it-highlightjs@4.3.0:
-    dependencies:
-      highlight.js: 11.12.0
-
   markdown-it@15.0.2:
     dependencies:
       argparse: 3.0.2
@@ -8554,14 +8532,6 @@ snapshots:
       '@intlify/shared': 11.4.14
       '@vue/devtools-api': 6.6.4
       vue: 3.5.44(typescript@6.0.3)
-
-  vue-img-cutter@3.1.1(typescript@6.0.3):
-    dependencies:
-      core-js: 3.50.0
-      vue: 3.5.44(typescript@6.0.3)
-      vue-i18n: 11.4.14(vue@3.5.44(typescript@6.0.3))
-    transitivePeerDependencies:
-      - typescript
 
   vue-json-pretty@2.6.0(vue@3.5.44(typescript@6.0.3)):
     dependencies:

@@ -15,7 +15,6 @@ import {
   toggleDarkMode,
   toggleSidebarColor,
 } from "@/utils/ui/colors";
-import { formatToDate } from "@/utils/common";
 import { StorageConfig } from "@/utils/storage";
 import { SETTINGS_KEYS } from "@/constants";
 import { useStorage } from "@vueuse/core";
@@ -46,7 +45,6 @@ export const useSettingsStore = defineStore(
     const showWorkTab = ref(SETTING_DEFAULT_CONFIG.showWorkTab);
     const showLanguage = ref(SETTING_DEFAULT_CONFIG.showLanguage);
     const showNprogress = ref(SETTING_DEFAULT_CONFIG.showNprogress);
-    const showFestivalText = ref(SETTING_DEFAULT_CONFIG.showFestivalText);
     const watermarkVisible = ref(SETTING_DEFAULT_CONFIG.watermarkVisible);
 
     // 功能
@@ -55,7 +53,6 @@ export const useSettingsStore = defineStore(
     const colorWeak = ref(SETTING_DEFAULT_CONFIG.colorWeak);
     /** 供布局监听：`reload()` 取反以触发主内容区整页刷新 */
     const refresh = ref(SETTING_DEFAULT_CONFIG.refresh);
-    const holidayFireworksLoaded = ref(SETTING_DEFAULT_CONFIG.holidayFireworksLoaded);
 
     // 样式
     const boxBorderMode = ref(SETTING_DEFAULT_CONFIG.boxBorderMode);
@@ -63,9 +60,6 @@ export const useSettingsStore = defineStore(
     const tabStyle = ref(SETTING_DEFAULT_CONFIG.tabStyle);
     const customRadius = ref(SETTING_DEFAULT_CONFIG.customRadius);
     const containerWidth = ref(SETTING_DEFAULT_CONFIG.containerWidth);
-
-    // 节日
-    const festivalDate = ref("");
 
     // 持久化（web-style：useStorage）
     const showTagsView = useStorage<boolean>(
@@ -140,12 +134,6 @@ export const useSettingsStore = defineStore(
 
     const getCustomRadius = computed((): string => {
       return (customRadius.value ?? SETTING_DEFAULT_CONFIG.customRadius) + "rem";
-    });
-
-    /** festivalDate 存「上次完成烟花播放」的自然日 YYYY-MM-DD，与今天相同则当天不再播 */
-    const isShowFireworks = computed((): boolean => {
-      const today = formatToDate(new Date());
-      return festivalDate.value !== today;
     });
 
     const settingsMap = {
@@ -291,18 +279,6 @@ export const useSettingsStore = defineStore(
       document.documentElement.style.setProperty("--custom-radius", `${normalizedRadius}rem`);
     };
 
-    const setholidayFireworksLoaded = (isLoad: boolean) => {
-      holidayFireworksLoaded.value = isLoad;
-    };
-
-    const setShowFestivalText = (show: boolean) => {
-      showFestivalText.value = show;
-    };
-
-    const setFestivalDate = (date: string) => {
-      festivalDate.value = date;
-    };
-
     const setDualMenuShowText = (show: boolean) => {
       dualMenuShowText.value = show;
     };
@@ -378,19 +354,16 @@ export const useSettingsStore = defineStore(
       showWorkTab,
       showLanguage,
       showNprogress,
-      showFestivalText,
       watermarkVisible,
       autoClose,
       uniqueOpened,
       colorWeak,
       refresh,
-      holidayFireworksLoaded,
       boxBorderMode,
       pageTransition,
       tabStyle,
       customRadius,
       containerWidth,
-      festivalDate,
 
       // 从 settings.store.ts 来的状态
       showTagsView,
@@ -412,7 +385,6 @@ export const useSettingsStore = defineStore(
       isDark,
       getMenuOpenWidth,
       getCustomRadius,
-      isShowFireworks,
 
       // 从 setting.ts 来的方法
       switchMenuLayouts,
@@ -437,9 +409,6 @@ export const useSettingsStore = defineStore(
       reload,
       setWatermarkVisible,
       setCustomRadius,
-      setholidayFireworksLoaded,
-      setShowFestivalText,
-      setFestivalDate,
       setDualMenuShowText,
 
       // 从 settings.store.ts 来的方法

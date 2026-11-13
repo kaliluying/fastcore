@@ -513,17 +513,22 @@ async function handleSaveTitle(row: ChatSession) {
 }
 
 async function handleSubmit() {
-  dataFormRef.value?.validate(async (valid: boolean) => {
-    if (!valid) return;
-    try {
-      await AiChatAPI.createSession({ title: formData.value.title });
-      dialogVisible.visible = false;
-      await resetForm();
-      await refreshCreate();
-    } catch (error: unknown) {
-      console.error(error);
-    }
-  });
+  const form = dataFormRef.value;
+  if (!form) return;
+  const valid = await Promise.resolve(form.validate()).catch(() => false);
+  if (!valid) return;
+
+  submitLoading.value = true;
+  try {
+    await AiChatAPI.createSession({ title: formData.value.title });
+    dialogVisible.visible = false;
+    await resetForm();
+    await refreshCreate();
+  } catch (error: unknown) {
+    console.error(error);
+  } finally {
+    submitLoading.value = false;
+  }
 }
 </script>
 

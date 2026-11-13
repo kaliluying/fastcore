@@ -795,66 +795,77 @@ async function handleAdd() {
   }
 }
 
-async function handleOpenDialog(type: "create" | "update" | "detail", id?: number) {
-  dialogVisible.type = type;
-  if (id) {
-    const response = await UserAPI.detailUser(id);
-    if (type === "detail") {
-      dialogVisible.title = "用户详情";
-      Object.assign(detailFormData.value, response.data.data ?? {});
-    } else if (type === "update") {
-      dialogVisible.title = "修改用户";
-      Object.assign(formData.value, response.data.data);
-      formData.value.role_ids = (response.data.data.roles || []).map((item) => item.id as number);
-    }
-  } else {
-    dialogVisible.title = "新增用户";
-    Object.assign(formData.value, initialFormData);
-    formData.value.id = undefined;
-    userFormRenderKey.value += 1;
-  }
-  dialogVisible.visible = true;
-  await nextTick();
-  if (dataFormRef.value) {
-    dataFormRef.value.clearValidate();
-  }
-
+async function loadRoles() {
   const roleResponse = await RoleAPI.listRole();
-  const roleRows = roleResponse.data.data.items ?? [];
+  const roleRows = roleResponse.data.data?.items ?? [];
   roleOptions.value = roleRows
     .filter((item) => item.id !== undefined && item.name !== undefined)
     .map((item) => ({
       value: item.id as number,
       label: item.name as string,
       disabled: item.status === 1,
-    }))
-    .filter((opt) => !opt.disabled);
+    }));
+}
+
+async function handleOpenDialog(type: "create" | "update" | "detail", id?: number) {
+  dialogVisible.type = type;
+  if (type === "detail") {
+    if (id) {
+      const response = await UserAPI.detailUser(id);
+      dialogVisible.title = "用户详情";
+      Object.assign(detailFormData.value, response.data.data ?? {});
+    }
+  } else {
+    const [userRes] = await Promise.all([
+      id ? UserAPI.detailUser(id) : Promise.resolve(null),
+      loadRoles(),
+    ]);
+
+    if (id && userRes) {
+      dialogVisible.title = "修改用户";
+      Object.assign(formData.value, userRes.data.data);
+      formData.value.role_ids = (userRes.data.data.roles || []).map(
+        (item: any) => item.id as number
+      );
+    } else {
+      dialogVisible.title = "新增用户";
+      Object.assign(formData.value, initialFormData);
+      formData.value.id = undefined;
+      userFormRenderKey.value += 1;
+    }
+  }
+  dialogVisible.visible = true;
+  await nextTick();
+  if (dataFormRef.value) {
+    dataFormRef.value.clearValidate();
+  }
 }
 
 async function handleSubmit() {
-  dataFormRef.value?.validate(async (valid: boolean) => {
-    if (!valid) return;
-    submitLoading.value = true;
-    const id = formData.value.id;
-    try {
-      if (id) {
-        await UserAPI.updateUser(id, formData.value);
-        await refreshUpdate();
-      } else {
-        await UserAPI.createUser(formData.value);
-        await refreshCreate();
-      }
-      dialogVisible.visible = false;
-      await resetForm();
-      if (id === userStore.basicInfo.id) {
-        await userStore.getUserInfo();
-      }
-    } catch (error: unknown) {
-      console.error(error);
-    } finally {
-      submitLoading.value = false;
+  const form = dataFormRef.value;
+  if (!form) return;
+  const valid = await Promise.resolve(form.validate()).catch(() => false);
+  if (!valid) return;
+  submitLoading.value = true;
+  const id = formData.value.id;
+  try {
+    if (id) {
+      await UserAPI.updateUser(id, formData.value);
+      await refreshUpdate();
+    } else {
+      await UserAPI.createUser(formData.value);
+      await refreshCreate();
     }
-  });
+    dialogVisible.visible = false;
+    await resetForm();
+    if (id === userStore.basicInfo.id) {
+      await userStore.getUserInfo();
+    }
+  } catch (error: unknown) {
+    console.error(error);
+  } finally {
+    submitLoading.value = false;
+  }
 }
 
 async function handleBatchDelete() {

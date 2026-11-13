@@ -34,14 +34,9 @@ export class RouteTransformer {
 
     if (route.meta.isIframe) {
       this.handleIframeRoute(converted, route);
-    } else if (children?.length) {
-      // 中间层不挂组件，避免外层 RouterView 把目录壳缓存成多个实例。
-      converted.component = undefined;
-    } else {
+    } else if (!children?.length) {
       this.handleLeafRoute(converted, route, component as string, depth);
     }
-
-    converted.path = pathOut;
 
     if (children?.length) {
       converted.children = children.map((c) => this.transform(c, depth + 1, absPath));

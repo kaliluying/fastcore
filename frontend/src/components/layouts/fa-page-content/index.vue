@@ -2,9 +2,6 @@
 <template>
   <div id="app-scroll-main" class="layout-content" :style="containerStyle">
     <div id="app-content-header">
-      <!-- 节日滚动 -->
-      <FaFestivalTextScroll />
-
       <!-- 路由信息调试 -->
       <div
         v-if="isOpenRouteInfo === 'true'"

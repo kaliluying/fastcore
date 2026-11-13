@@ -152,7 +152,13 @@ export async function redirectToLogin(
       const currentPath = router.currentRoute.value.fullPath;
       useUserStore().resetAllState();
       resetDynamicRoutesSync();
-      await router.push(`/login?redirect=${encodeURIComponent(currentPath)}`);
+      const target =
+        currentPath && !currentPath.startsWith("/login")
+          ? `/login?redirect=${encodeURIComponent(currentPath)}`
+          : "/login";
+      if (router.currentRoute.value.path !== "/login") {
+        await router.push(target);
+      }
     } catch (error: any) {
       ElMessage.error(error?.message ?? String(error));
     } finally {

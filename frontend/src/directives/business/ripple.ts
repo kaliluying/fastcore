@@ -46,24 +46,28 @@ export interface RippleOptions {
 
 export type RippleDirective = Directive<HTMLElement, RippleOptions>;
 
+const RIPPLE_HANDLER = Symbol("rippleHandler");
+type RippleElement = HTMLElement & { [RIPPLE_HANDLER]?: (e: MouseEvent) => void };
+
 export const vRipple: RippleDirective = {
   mounted(el: HTMLElement, binding: DirectiveBinding) {
+    const target = el as RippleElement;
     // 获取指令的配置参数
     const options: RippleOptions = binding.value || {};
 
     // 设置元素为相对定位，并隐藏溢出部分
-    el.style.position = "relative";
-    el.style.overflow = "hidden";
+    target.style.position = "relative";
+    target.style.overflow = "hidden";
 
     // 点击事件处理
-    el.addEventListener("mousedown", (e: MouseEvent) => {
-      const rect = el.getBoundingClientRect();
+    const handler = (e: MouseEvent) => {
+      const rect = target.getBoundingClientRect();
       const left = e.clientX - rect.left;
       const top = e.clientY - rect.top;
 
       // 创建水波纹元素
       const ripple = document.createElement("div");
-      const diameter = Math.max(el.clientWidth, el.clientHeight);
+      const diameter = Math.max(target.clientWidth, target.clientHeight);
       const radius = diameter / 2;
 
       // 根据直径计算动画时间（直径越大，动画时间越长）
@@ -83,7 +87,7 @@ export const vRipple: RippleDirective = {
       const buttonTypes = ["primary", "info", "warning", "danger", "success"].map(
         (type) => `el-button--${type}`
       );
-      const isColoredButton = buttonTypes.some((type) => el.classList.contains(type));
+      const isColoredButton = buttonTypes.some((type) => target.classList.contains(type));
       const defaultColor = isColoredButton
         ? "rgba(255, 255, 255, 0.25)" // 有色按钮使用白色水波纹
         : "var(--el-color-primary-light-7)"; // 默认按钮使用主题色水波纹
@@ -95,7 +99,7 @@ export const vRipple: RippleDirective = {
       ripple.style.zIndex = "1";
 
       // 添加水波纹元素到DOM中
-      el.appendChild(ripple);
+      target.appendChild(ripple);
 
       // 触发动画
       requestAnimationFrame(() => {
@@ -107,7 +111,17 @@ export const vRipple: RippleDirective = {
       setTimeout(() => {
         ripple.remove();
       }, animationDuration + 500); // 增加500ms缓冲时间
-    });
+    };
+
+    target[RIPPLE_HANDLER] = handler;
+    target.addEventListener("mousedown", handler);
+  },
+  unmounted(el: HTMLElement) {
+    const target = el as RippleElement;
+    if (target[RIPPLE_HANDLER]) {
+      target.removeEventListener("mousedown", target[RIPPLE_HANDLER]);
+      delete target[RIPPLE_HANDLER];
+    }
   },
 };
 

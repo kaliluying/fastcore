@@ -12,9 +12,17 @@ function versionManifestUrl(): string {
   return `${baseUrl}version.json?ts=${Date.now()}`;
 }
 
+export function stopVersionCheck(): void {
+  if (checkTimer !== undefined) {
+    window.clearInterval(checkTimer);
+    checkTimer = undefined;
+  }
+}
+
 function showUpdateNotification(): void {
   if (updateNotified) return;
   updateNotified = true;
+  stopVersionCheck();
 
   ElNotification({
     title: "发现新版本",

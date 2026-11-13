@@ -241,17 +241,13 @@ const suggestModels = (query: string, callback: (items: { value: string }[]) => 
 
 watch(
   () => [form.chat_protocol, form.openai_base_url, form.openai_api_key, form.openai_model],
-  () => {
+  ([newProto, newUrl, newKey], oldVal) => {
     capabilityCheck.value = undefined;
-  }
-);
-
-watch(
-  () => [form.chat_protocol, form.openai_base_url, form.openai_api_key],
-  () => {
-    capabilityCheck.value = undefined;
-    modelOptions.value = [];
-    showAllModels.value = false;
+    const [oldProto, oldUrl, oldKey] = oldVal ?? [];
+    if (newProto !== oldProto || newUrl !== oldUrl || newKey !== oldKey) {
+      modelOptions.value = [];
+      showAllModels.value = false;
+    }
   }
 );
 

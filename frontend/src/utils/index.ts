@@ -34,6 +34,3 @@ export * from "./table";
 
 // 菜单与图标
 export * from "./menuIcon";
-
-// 文件
-export * from "./file/dataUrl";

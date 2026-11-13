@@ -11,8 +11,10 @@ import AutoImport from "unplugin-auto-import/vite";
 import ElementPlus from "unplugin-element-plus/vite";
 import { ElementPlusResolver } from "unplugin-vue-components/resolvers";
 import tailwindcss from "@tailwindcss/vite";
-import vitePluginStart from "./build/vitePluginStart";
-import { name, version, engines, dependencies, devDependencies } from "./package.json";
+import vitePluginStart from "./build/vitePluginStart.ts";
+import pkg from "./package.json" with { type: "json" };
+
+const { name, version, engines, dependencies, devDependencies } = pkg;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -161,7 +163,6 @@ export default ({ mode }: { mode: string }) => {
                 "hookable",
                 "tslib",
                 "copy-anything",
-                "danmu.js",
                 "lodash-unified",
                 "perfect-debounce",
               ].includes(module)
@@ -265,10 +266,9 @@ export default ({ mode }: { mode: string }) => {
         "nprogress",
         "qs",
         "@iconify/vue",
-        "highlight.js",
+        "highlight.js/lib/core",
         "dompurify",
         "markdown-it",
-        "markdown-it-highlightjs",
         "mitt",
         "pinia-plugin-persistedstate",
         ...elementPlusStyleIncludes(),

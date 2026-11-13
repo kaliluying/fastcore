@@ -6,22 +6,23 @@
  */
 import { watch } from "vue";
 import { useBreakpoints } from "@vueuse/core";
-import { useCeremony } from "@/hooks/core/useCeremony";
 import { useSettingsStore } from "@stores";
 import { MenuTypeEnum } from "@/enums/appEnum";
 import AppConfig from "@/config";
-import { StorageConfig, validateStorageData, toggleTransition, systemUpgrade } from "@utils";
+import { StorageConfig, toggleTransition } from "@utils";
 
 export function useAppBootstrap() {
-  const { openFestival } = useCeremony();
-
   /** 设置面板移除后仍需在启动时应用的 DOM / 布局偏好 */
   const applyLayoutPreferences = () => {
     const settingStore = useSettingsStore();
 
-    if (settingStore.colorWeak) {
-      document.documentElement.classList.add("color-weak");
-    }
+    watch(
+      () => settingStore.colorWeak,
+      (val) => {
+        document.documentElement.classList.toggle("color-weak", Boolean(val));
+      },
+      { immediate: true }
+    );
 
     document.documentElement.setAttribute(
       "data-box-mode",
@@ -76,12 +77,9 @@ export function useAppBootstrap() {
   };
 
   const bootstrap = () => {
-    validateStorageData();
     toggleTransition(false);
-    systemUpgrade();
     applyLayoutPreferences();
     startResponsiveMenuLayout();
-    openFestival();
   };
 
   return { bootstrap };

@@ -1,6 +1,6 @@
 import type { RouteLocationNormalized, RouteRecordRaw } from "vue-router";
 import { router } from "@/router/instance";
-import type { AppRouteRecord, AppRouteRecord as AppRouteRecordFromTypes } from "@/types";
+import type { AppRouteRecord } from "@/types";
 import i18n, { $t } from "@/locales";
 import AppConfig from "@/config";
 import { useSettingsStore } from "@/store/modules/setting.store";
@@ -44,14 +44,14 @@ export function isIframe(url: string): boolean {
   return url.startsWith("/outside/iframe/");
 }
 
-export const isNavigableMenuItem = (menuItem: AppRouteRecordFromTypes): boolean => {
+export const isNavigableMenuItem = (menuItem: AppRouteRecord): boolean => {
   if (!menuItem.path || !menuItem.path.trim()) return false;
   return !menuItem.meta?.isHide;
 };
 
 const normalizePath = (path: string): string => (path.startsWith("/") ? path : `/${path}`);
 
-export const getFirstMenuPath = (menuList: AppRouteRecordFromTypes[]): string => {
+export const getFirstMenuPath = (menuList: AppRouteRecord[]): string => {
   if (!Array.isArray(menuList) || menuList.length === 0) return "";
 
   for (const menuItem of menuList) {

@@ -3,7 +3,6 @@ import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { LanguageEnum } from "@/enums/appEnum";
 import { router } from "@/router/instance";
-import { useSettingsStore } from "./setting.store";
 import { useWorktabStore } from "./worktab.store";
 import { useMenuStore } from "./menu.store";
 import { AppRouteRecord } from "@/types/router";
@@ -63,18 +62,8 @@ export const useUserStore = defineStore(
 
     // 基础用户信息。
     const basicInfo = computed(() => info.value);
-    // 设置状态。
-    const getSettingState = computed(() => useSettingsStore().$state);
-    // 工作台状态。
-    const getWorktabState = computed(() => useWorktabStore().$state);
-    // 获取基础用户信息。
-    const getBasicInfo = computed(() => info.value);
-    // 获取路由列表。
-    const getRouteList = computed(() => routeList.value);
     // 获取权限列表。
     const getPerms = computed(() => prems.value);
-    // 获取动态路由加载状态。
-    const getHasGetRoute = computed(() => hasGetRoute.value);
 
     /**
      * 设置用户信息。
@@ -348,13 +337,8 @@ export const useUserStore = defineStore(
       hasGetRoute,
       rememberMe,
       getUserInfo,
-      getSettingState,
-      getWorktabState,
       basicInfo,
-      getBasicInfo,
-      getRouteList,
       getPerms,
-      getHasGetRoute,
       setUserInfo,
       setLoginStatus,
       setLanguage,

@@ -2,8 +2,6 @@
 
 declare module "nprogress";
 
-declare module "vue-img-cutter";
-
 // 全局变量声明
 declare const __APP_VERSION__: string; // 版本号
 

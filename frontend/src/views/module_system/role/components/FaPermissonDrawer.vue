@@ -105,16 +105,19 @@ const permissionState = ref<permissionDataType>({
 const init = async () => {
   loading.value = true;
   try {
-    const menuResponse = await MenuAPI.listMenu();
+    const [menuResponse, roleResponse] = await Promise.all([
+      MenuAPI.listMenu(),
+      RoleAPI.detailRole(props.roleId),
+    ]);
     rawMenuTree.value = menuResponse.data.data || [];
 
-    const roleResponse = await RoleAPI.detailRole(props.roleId);
-    const savedMenuIds = roleResponse.data.data.menus?.map((menu: any) => menu.id) || [];
+    const roleData = roleResponse.data.data;
+    const savedMenuIds = roleData?.menus?.map((menu: any) => menu.id) || [];
 
     permissionState.value = {
       role_ids: [props.roleId],
       menu_ids: savedMenuIds,
-      data_scope: roleResponse.data.data.data_scope || 1,
+      data_scope: roleData?.data_scope || 1,
     };
 
     menuCheckedIds.value = savedMenuIds;

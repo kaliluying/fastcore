@@ -29,8 +29,6 @@ vi.mock("@utils", async () => ({
   setWorktab: vi.fn(),
   setPageTitle: vi.fn(),
   loadingService: { showLoading: vi.fn(), hideLoading: vi.fn() },
-  resetStorageInvalidated: vi.fn(),
-  checkStorageInvalidated: () => false,
 }));
 // Only view loading is stubbed; guards, menu conversion and route registration run unchanged.
 vi.mock("@/router/core/ComponentLoader", () => ({

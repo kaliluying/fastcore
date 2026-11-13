@@ -583,6 +583,7 @@ const {
         width: 88,
         status: {
           1: { type: "success", text: "成功" },
+          2: { type: "danger", text: "失败" },
           0: { type: "danger", text: "失败" },
         },
       },

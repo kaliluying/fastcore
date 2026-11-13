@@ -47,7 +47,11 @@ def validate_root(root: Path) -> None:
 
 def clean_environment() -> dict[str, str]:
     # Do not inherit database, provider, proxy or application settings from the caller.
-    return {key: os.environ[key] for key in ("PATH", "HOME", "TMPDIR", "LANG", "LC_ALL", "SYSTEMROOT") if key in os.environ}
+    # PostgreSQL 18 aborts when LC_ALL/LANG are empty ("postmaster became multithreaded").
+    environment = {key: os.environ[key] for key in ("PATH", "HOME", "TMPDIR", "LANG", "LC_ALL", "SYSTEMROOT") if key in os.environ and os.environ[key]}
+    environment.setdefault("LC_ALL", "C")
+    environment.setdefault("LANG", "C")
+    return environment
 
 
 def wait_until(probe, *, timeout=60, description="condition"):

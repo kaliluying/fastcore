@@ -73,7 +73,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, onActivated, onDeactivated, onMounted, onUnmounted, ref } from "vue";
 import HealthAPI, { type HealthReadiness } from "@/api/module_common/health";
 import type { AppRouteRecord } from "@/types/router";
 import { useMenuStore, useUserStore } from "@stores";
@@ -143,6 +143,7 @@ const managementLinks = computed(() =>
 const healthState = ref<HealthState>("loading");
 const healthData = ref<HealthReadiness | null>(null);
 const healthLoading = ref(false);
+const hasLoaded = ref(false);
 const healthDescription = computed(() => {
   if (healthState.value === "unavailable") return "暂时无法检查系统状态，请稍后重试";
   if (!healthData.value) return "";
@@ -198,19 +199,39 @@ async function loadHealthStatus(): Promise<void> {
     healthState.value = readiness ? "degraded" : "unavailable";
   } finally {
     healthLoading.value = false;
+    hasLoaded.value = true;
   }
 }
 
 let healthRefreshTimer: number | undefined;
 
+const startHealthTimer = () => {
+  if (healthRefreshTimer === undefined) {
+    healthRefreshTimer = window.setInterval(() => void loadHealthStatus(), HEALTH_REFRESH_INTERVAL);
+  }
+};
+
+const stopHealthTimer = () => {
+  if (healthRefreshTimer !== undefined) {
+    window.clearInterval(healthRefreshTimer);
+    healthRefreshTimer = undefined;
+  }
+};
+
 onMounted(() => {
   void loadHealthStatus();
-  healthRefreshTimer = window.setInterval(() => void loadHealthStatus(), HEALTH_REFRESH_INTERVAL);
+  startHealthTimer();
 });
 
-onUnmounted(() => {
-  if (healthRefreshTimer !== undefined) window.clearInterval(healthRefreshTimer);
+onActivated(() => {
+  if (hasLoaded.value) {
+    void loadHealthStatus();
+    startHealthTimer();
+  }
 });
+
+onDeactivated(stopHealthTimer);
+onUnmounted(stopHealthTimer);
 </script>
 
 <style scoped lang="scss">

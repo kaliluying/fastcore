@@ -5,10 +5,54 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import MarkdownIt, { type MarkdownIt as MarkdownItInstance } from "markdown-it";
-import markdownItHighlightjs from "markdown-it-highlightjs";
-import hljs from "highlight.js";
+import hljs from "highlight.js/lib/core";
+import javascript from "highlight.js/lib/languages/javascript";
+import typescript from "highlight.js/lib/languages/typescript";
+import python from "highlight.js/lib/languages/python";
+import bash from "highlight.js/lib/languages/bash";
+import json from "highlight.js/lib/languages/json";
+import sql from "highlight.js/lib/languages/sql";
+import xml from "highlight.js/lib/languages/xml";
+import css from "highlight.js/lib/languages/css";
+import yaml from "highlight.js/lib/languages/yaml";
+import markdown from "highlight.js/lib/languages/markdown";
+import diff from "highlight.js/lib/languages/diff";
+import java from "highlight.js/lib/languages/java";
+import go from "highlight.js/lib/languages/go";
+import rust from "highlight.js/lib/languages/rust";
+import c from "highlight.js/lib/languages/c";
+import cpp from "highlight.js/lib/languages/cpp";
 import DOMPurify from "dompurify";
 import "highlight.js/styles/atom-one-light.css";
+
+const languages: Record<string, Parameters<typeof hljs.registerLanguage>[1]> = {
+  javascript,
+  js: javascript,
+  typescript,
+  ts: typescript,
+  python,
+  py: python,
+  bash,
+  sh: bash,
+  json,
+  sql,
+  xml,
+  html: xml,
+  css,
+  yaml,
+  yml: yaml,
+  markdown,
+  md: markdown,
+  diff,
+  java,
+  go,
+  rust,
+  rs: rust,
+  c,
+  cpp,
+};
+
+Object.entries(languages).forEach(([name, lang]) => hljs.registerLanguage(name, lang));
 
 defineOptions({ name: "FaMarkdownRenderer" });
 
@@ -33,29 +77,31 @@ const md: MarkdownItInstance = new MarkdownIt({
   breaks: true,
   highlight(str: string, lang: string): string {
     const cleanLang = (lang || "").trim().toLowerCase();
-    const langAttr = cleanLang ? ` data-lang="${cleanLang}"` : "";
-    if (lang && hljs.getLanguage(lang)) {
+    if (cleanLang && hljs.getLanguage(cleanLang)) {
       try {
-        return `<pre class="hljs"${langAttr}><code>${hljs.highlight(str, { language: lang, ignoreIllegals: true }).value}</code></pre>`;
+        return `<pre class="hljs"><code>${hljs.highlight(str, { language: cleanLang, ignoreIllegals: true }).value}</code></pre>`;
       } catch {
-        return `<pre class="hljs"${langAttr}><code>${md.utils.escapeHtml(str)}</code></pre>`;
+        return `<pre class="hljs"><code>${md.utils.escapeHtml(str)}</code></pre>`;
       }
     }
-    return `<pre class="hljs"${langAttr}><code>${md.utils.escapeHtml(str)}</code></pre>`;
+    return `<pre class="hljs"><code>${md.utils.escapeHtml(str)}</code></pre>`;
   },
-}).use(markdownItHighlightjs);
+});
 
+type RenderRule = NonNullable<MarkdownItInstance["renderer"]["rules"]["fence"]>;
 const defaultFence = md.renderer.rules.fence;
 const COPY_BTN_HTML =
   '<button class="code-copy-btn" type="button" title="复制代码" aria-label="复制代码"><svg class="icon-copy" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><svg class="icon-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></button>';
 
-md.renderer.rules.fence = function (tokens: any[], idx: number, options: any, env: any, self: any) {
+md.renderer.rules.fence = function (...args: Parameters<RenderRule>) {
+  const [tokens, idx, options, env, self] = args;
   const token = tokens[idx];
+  if (!token) return "";
   const info = token.info ? md.utils.unescapeAll(token.info).trim() : "";
   const lang = info ? info.split(/\s+/g)[0] : "";
   const rendered = defaultFence
     ? defaultFence(tokens, idx, options, env, self)
-    : self.renderToken(tokens, idx, options, env, self);
+    : self.renderToken(tokens, idx, options);
   const langAttr = lang ? ` data-lang="${lang.toLowerCase()}"` : "";
   return rendered.replace(/^<pre([^>]*)>/, `<pre$1${langAttr}>${COPY_BTN_HTML}`);
 };
