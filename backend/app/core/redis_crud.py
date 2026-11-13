@@ -29,22 +29,6 @@ class RedisCURD:
             logger.error(f"批量获取缓存失败: {e!s}")
             return []
 
-    async def get_keys(self, pattern: str = "*") -> list:
-        """获取缓存键名。
-
-        Args:
-            pattern (str, optional): 匹配模式,默认值为"*"。
-
-        Returns:
-            list: 返回匹配的缓存键名列表,如果获取失败则返回空列表
-        """
-        try:
-            keys = await self.redis.keys(f"{pattern}")
-            return keys
-        except Exception as e:
-            logger.error(f"获取缓存键名失败: {e!s}")
-            return []
-
     async def get(self, key: str) -> Any:
         """获取缓存。
 
@@ -244,24 +228,6 @@ class RedisCURD:
             return True
         except Exception as e:
             logger.error(f"删除缓存失败: {e!s}")
-            return False
-
-    async def clear(self, pattern: str = "*") -> bool:
-        """清空缓存。
-
-        Args:
-            pattern (str, optional): 匹配模式,默认值为"*"。
-
-        Returns:
-            bool: 如果清空缓存成功则返回True,否则返回False
-        """
-        try:
-            keys = await self.redis.keys(f"{pattern}")
-            if keys:
-                await self.redis.delete(*keys)
-            return True
-        except Exception as e:
-            logger.error(f"清空缓存失败: {e!s}")
             return False
 
     async def exists(self, key: str) -> bool:

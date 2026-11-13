@@ -70,6 +70,7 @@ def setup_logger() -> None:
         retention=30,
         compression="gz",
         encoding="utf-8",
+        enqueue=True,  # 多进程共享日志文件,必须经队列写入,避免轮转竞争
         diagnose=False,
         backtrace=False,
     )

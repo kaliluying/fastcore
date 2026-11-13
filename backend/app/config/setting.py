@@ -64,7 +64,7 @@ class Settings(BaseSettings):
     # ================================================= #
     SECRET_KEY: str = ""  # JWT密钥；生产环境必须显式配置
     ALGORITHM: str = "HS256"  # JWT算法
-    ACCESS_TOKEN_EXPIRE_SECONDS: int = 60 * 60 * 12  # access_token过期时间(秒) 12 小时
+    ACCESS_TOKEN_EXPIRE_SECONDS: int = 60 * 30  # access_token过期时间(秒) 30 分钟,泄露窗口短;依靠滑动过期和 refresh_token 续期
     REFRESH_TOKEN_EXPIRE_SECONDS: int = 60 * 60 * 12  # refresh_token过期时间(秒) 12 小时
     TOKEN_TYPE: str = "Bearer"  # token类型（RFC 6750 标准大小写）
     TOKEN_REQUEST_PATH_EXCLUDE: list[str] = ["api/v1/auth/login"]  # JWT / RBAC 路由白名单

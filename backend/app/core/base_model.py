@@ -146,42 +146,42 @@ class UserMixin(MappedBase):
 
     @declared_attr
     def created_by(self) -> Mapped[Optional["UserModel"]]:
-        """创建人关联关系（延迟加载，避免循环依赖）。
+        """创建人关联关系（默认不加载，由 __loader_options__ 显式预加载）。
 
         Returns:
             Mapped[Optional[UserModel]]: 创建人 ORM 关系。
         """
         return relationship(
             "UserModel",
-            lazy="selectin",
+            lazy="noload",
             foreign_keys=lambda: self.created_id,  # pyright: ignore[reportArgumentType]
             uselist=False,
         )
 
     @declared_attr
     def updated_by(self) -> Mapped[Optional["UserModel"]]:
-        """更新人关联关系（延迟加载，避免循环依赖）。
+        """更新人关联关系（默认不加载，由 __loader_options__ 显式预加载）。
 
         Returns:
             Mapped[Optional[UserModel]]: 更新人 ORM 关系。
         """
         return relationship(
             "UserModel",
-            lazy="selectin",
+            lazy="noload",
             foreign_keys=lambda: self.updated_id,  # pyright: ignore[reportArgumentType]
             uselist=False,
         )
 
     @declared_attr
     def deleted_by(self) -> Mapped[Optional["UserModel"]]:
-        """删除人关联关系（延迟加载，避免循环依赖）。
+        """删除人关联关系（默认不加载，由 __loader_options__ 显式预加载）。
 
         Returns:
             Mapped[Optional[UserModel]]: 删除人 ORM 关系。
         """
         return relationship(
             "UserModel",
-            lazy="selectin",
+            lazy="noload",
             foreign_keys=lambda: self.deleted_id,  # pyright: ignore[reportArgumentType]
             uselist=False,
         )

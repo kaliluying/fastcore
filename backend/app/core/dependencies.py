@@ -134,7 +134,7 @@ async def _load_user_from_db(db: AsyncSession, username: str | None = None, *, u
     """从数据库加载用户（含角色、菜单等关联的全量预加载）。
 
     使用原始查询以绕过 CRUDBase 的权限过滤，确保用户认证阶段不受数据权限影响。
-    所有关系链均 eager-loaded，调用方可在会话关闭后安全访问对象属性。
+    角色/菜单链均 eager-loaded，调用方可在会话关闭后安全访问对象属性。
 
     Args:
         db: 数据库会话
@@ -142,7 +142,7 @@ async def _load_user_from_db(db: AsyncSession, username: str | None = None, *, u
         user_id: 会话绑定的用户主键
 
     Returns:
-        UserModel: 已全量加载的用户 ORM 对象
+        UserModel: 已加载认证所需关联的用户 ORM 对象
     """
     from app.api.v1.module_system.role.model import RoleModel
     from app.api.v1.module_system.user.model import UserModel
@@ -151,7 +151,6 @@ async def _load_user_from_db(db: AsyncSession, username: str | None = None, *, u
         select(UserModel)
         .options(
             selectinload(UserModel.roles).selectinload(RoleModel.menus),
-            selectinload(UserModel.created_by),
         )
         .where(
             UserModel.id == user_id if user_id is not None else UserModel.username == username,

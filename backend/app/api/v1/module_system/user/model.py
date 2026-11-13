@@ -48,7 +48,7 @@ class UserModel(ModelMixin, UserMixin):
     gender: Mapped[str | None] = mapped_column(String(1), default="2", nullable=True, comment="性别(0:男 1:女 2:未知)")
     avatar: Mapped[str | None] = mapped_column(String(255), nullable=True, comment="头像URL地址")
     is_superuser: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, comment="是否超管")
-    last_login: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, comment="最后登录时间")
+    last_login: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, comment="最后登录时间")
     gitee_login: Mapped[str | None] = mapped_column(String(32), nullable=True, comment="Gitee登录")
     github_login: Mapped[str | None] = mapped_column(String(32), nullable=True, comment="Github登录")
     wx_login: Mapped[str | None] = mapped_column(String(32), nullable=True, comment="微信登录")
@@ -57,5 +57,5 @@ class UserModel(ModelMixin, UserMixin):
     description: Mapped[str | None] = mapped_column(Text, default=None, nullable=True, comment="备注")
 
     roles: Mapped[list["RoleModel"]] = relationship(secondary="sys_user_roles", back_populates="users", lazy="selectin")
-    created_by: Mapped["UserModel | None"] = relationship("UserModel", foreign_keys="UserModel.created_id", remote_side="UserModel.id", lazy="selectin", uselist=False, viewonly=True)
-    updated_by: Mapped["UserModel | None"] = relationship("UserModel", foreign_keys="UserModel.updated_id", remote_side="UserModel.id", lazy="selectin", uselist=False, viewonly=True)
+    created_by: Mapped["UserModel | None"] = relationship("UserModel", foreign_keys="UserModel.created_id", remote_side="UserModel.id", lazy="noload", uselist=False, viewonly=True)
+    updated_by: Mapped["UserModel | None"] = relationship("UserModel", foreign_keys="UserModel.updated_id", remote_side="UserModel.id", lazy="noload", uselist=False, viewonly=True)

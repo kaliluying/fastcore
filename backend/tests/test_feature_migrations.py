@@ -89,7 +89,9 @@ class FeatureMigrationTests(unittest.TestCase):
         config.set_main_option("script_location", str(VERSIONS.parent))
         agent = load_revision("20261024_agent_runs")
         self.assertEqual(agent.down_revision, REVISIONS[-1])
-        self.assertEqual(ScriptDirectory.from_config(config).get_heads(), [agent.revision])
+        last_login = load_revision("20261114_last_login_naive")
+        self.assertEqual(last_login.down_revision, agent.revision)
+        self.assertEqual(ScriptDirectory.from_config(config).get_heads(), [last_login.revision])
 
     def test_agent_migration_matches_models_and_preserves_history(self):
         revision = load_revision("20261024_agent_runs")
