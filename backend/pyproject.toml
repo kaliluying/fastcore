@@ -54,6 +54,7 @@ dev = [
     "httpx2==2.13.1",        # Anthropic 1.x SDK 的 MockTransport
     "pytest==9.1.1",
     "pytest-asyncio>=1.4.0",  # 异步测试支持
+    "pytest-xdist>=3.8.0",    # 多进程并行执行（pytest -n auto）
     "ruff==0.17.0",          # 代码检查、格式化
 ]
 
@@ -140,3 +141,4 @@ line-ending = "auto"
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+addopts = "-n auto"

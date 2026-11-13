@@ -114,8 +114,13 @@ async def test_loguru_archive_collision_names_are_included(logs, name):
     assert result["entries"][0]["file"] == name
 
 
+# gzip 头部内嵌 mtime，直接调用 gzip.compress 会让参数化 ID 随时间变化，
+# xdist 并行收集时各 worker 用例列表不一致导致报错；改用 mtime=0 的固定字节。
+_CORRUPT_GZIP_BYTES = bytes.fromhex("1f8b0800000000000002ff2b4a4dce2f4a010000919f349b")
+
+
 @pytest.mark.asyncio
-@pytest.mark.parametrize("contents", [b"not gzip", gzip.compress(b"record")[:-4]])
+@pytest.mark.parametrize("contents", [b"not gzip", _CORRUPT_GZIP_BYTES])
 async def test_corrupt_archive_fails_without_exposing_content(logs, contents):
     (logs.LOG_DIR / "fastcore.2026-10-02.log.gz").write_bytes(contents)
     with pytest.raises(logs.CustomException) as caught:
