@@ -107,7 +107,7 @@
           <ElSelect
             v-model="formData.memory_type"
             :disabled="dialogVisible.type === 'update'"
-            style="width: 100%"
+            class="w-full"
           >
             <ElOption label="用户偏好" value="user_preference" />
             <ElOption label="用户事实" value="fact" />
