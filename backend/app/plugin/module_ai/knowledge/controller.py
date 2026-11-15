@@ -18,6 +18,7 @@ from .schema import (
     KnowledgeBaseUpdateSchema,
     KnowledgeDocumentOutSchema,
     KnowledgeDocumentQueryParam,
+    KnowledgeStatsSchema,
     RetrievalTestSchema,
 )
 from .service import KnowledgeService
@@ -42,6 +43,18 @@ async def list_knowledge_base_controller(
         order_by=page.order_by,
     )
     return SuccessResponse(data=result, msg="query knowledge bases success")
+
+
+@KnowledgeRouter.get(
+    "/stats",
+    summary="Knowledge overview stats",
+    response_model=ResponseSchema[KnowledgeStatsSchema],
+)
+async def knowledge_stats_controller(
+    auth: Annotated[AuthSchema, Depends(AuthPermission(["module_ai:knowledge:query"]))],
+) -> JSONResponse:
+    result = await KnowledgeService(auth).get_stats()
+    return SuccessResponse(data=result, msg="query knowledge stats success")
 
 
 @KnowledgeRouter.get(

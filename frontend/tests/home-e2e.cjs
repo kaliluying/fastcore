@@ -270,7 +270,7 @@ async function run() {
       false
     );
     assert.equal(
-      await restricted.locator(".knowledge-launch, .quick-links, .login-trend-card").count(),
+      await restricted.locator(".knowledge-launch, .pending-panel, .login-trend-card").count(),
       0
     );
     assert.equal(restrictedTrendRequests, 0);

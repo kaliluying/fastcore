@@ -10,6 +10,33 @@ from conftest import assert_route
 from fastapi.testclient import TestClient
 
 
+class TestKnowledgeStats:
+    """首页知识库概览统计。"""
+
+    def test_knowledge_stats(self, ai_client: TestClient, auth_headers: dict) -> None:
+        response = ai_client.get("/ai/knowledge/stats", headers=auth_headers)
+
+        assert response.status_code == 200
+        stats = response.json()["data"]
+        assert set(stats) == {
+            "knowledge_bases",
+            "documents",
+            "indexed_documents",
+            "processing_documents",
+            "failed_documents",
+        }
+        assert all(isinstance(value, int) and value >= 0 for value in stats.values())
+        assert (
+            stats["indexed_documents"]
+            + stats["processing_documents"]
+            + stats["failed_documents"]
+            <= stats["documents"]
+        )
+
+    def test_knowledge_stats_requires_auth(self, ai_client: TestClient) -> None:
+        assert_route(ai_client, "GET", "/ai/knowledge/stats", expected_status=401)
+
+
 class TestAiChat:
     """会话真实 CRUD，以及未经认证的 AI 请求边界。"""
 

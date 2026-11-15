@@ -42,6 +42,14 @@ const KnowledgeAPI = {
     });
   },
 
+  getStats() {
+    return request<ApiResponse<KnowledgeStats>>({
+      url: `${API_PATH}/stats`,
+      method: "get",
+      showErrorMessage: false,
+    });
+  },
+
   listDocument(query: KnowledgeDocumentListQuery) {
     return request<ApiResponse<PageResult<KnowledgeDocument>>>({
       url: `${API_PATH}/document/list`,
@@ -141,6 +149,14 @@ export interface KnowledgeBase extends BaseType, KnowledgeBaseForm {
   indexed_document_count: number;
   indexing_document_count: number;
   failed_document_count: number;
+}
+
+export interface KnowledgeStats {
+  knowledge_bases: number;
+  documents: number;
+  indexed_documents: number;
+  processing_documents: number;
+  failed_documents: number;
 }
 
 export interface KnowledgeDocumentListQuery extends PageQuery {

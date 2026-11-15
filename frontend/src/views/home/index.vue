@@ -39,33 +39,38 @@
         </RouterLink>
       </nav>
     </section>
+    <WorkspaceMetrics v-if="knowledgeStats || aiUsage" :stats="knowledgeStats" :usage="aiUsage" />
     <div
       class="home-content"
-      :class="{ 'home-content--single': !canViewLoginTrend || !managementLinks.length }"
+      :class="{ 'home-content--single': !canViewLoginTrend || !pendingItems.length }"
     >
       <LoginTrend v-if="canViewLoginTrend" />
 
       <section
-        v-if="managementLinks.length"
-        class="quick-links"
-        aria-labelledby="quick-links-title"
+        v-if="pendingItems.length"
+        class="pending-panel"
+        aria-labelledby="pending-panel-title"
       >
-        <div class="quick-links__header">
-          <h2 id="quick-links-title">管理与配置</h2>
-          <span>快捷入口</span>
+        <div class="pending-panel__header">
+          <h2 id="pending-panel-title">待处理</h2>
+          <span>{{ pendingItems.length }} 项</span>
         </div>
-        <nav aria-label="快捷入口">
-          <RouterLink v-for="link in managementLinks" :key="link.path" :to="link.path">
-            <span class="quick-links__icon" aria-hidden="true">
-              <FaSvgIcon :icon="link.icon" />
+        <nav aria-label="待处理事项">
+          <RouterLink v-for="item in pendingItems" :key="item.key" :to="item.path">
+            <span class="pending-panel__count" aria-hidden="true">
+              {{ item.count === null ? "!" : item.count }}
             </span>
-            <span>{{ formatMenuTitle(link.title) }}</span>
-            <FaSvgIcon icon="ri:arrow-right-s-line" class="quick-links__arrow" aria-hidden="true" />
+            <span>{{ item.label }}</span>
+            <FaSvgIcon
+              icon="ri:arrow-right-s-line"
+              class="pending-panel__arrow"
+              aria-hidden="true"
+            />
           </RouterLink>
         </nav>
       </section>
 
-      <p v-if="!canViewLoginTrend && !quickLinks.length" class="home-empty">
+      <p v-if="!canViewLoginTrend && !pendingItems.length && !quickLinks.length" class="home-empty">
         暂无可用入口，请联系管理员分配访问权限。
       </p>
     </div>
@@ -75,12 +80,15 @@
 <script setup lang="ts">
 import { computed, onActivated, onDeactivated, onMounted, onUnmounted, ref } from "vue";
 import HealthAPI, { type HealthReadiness } from "@/api/module_common/health";
+import AiChatAPI, { type AiUsageSummary } from "@/api/module_ai/chat";
+import KnowledgeAPI, { type KnowledgeStats } from "@/api/module_ai/knowledge";
 import type { AppRouteRecord } from "@/types/router";
 import { useMenuStore, useUserStore } from "@stores";
 import { hasPermissionCode } from "@/utils/auth/permission";
 import { formatMenuTitle, HttpError } from "@utils";
 import Banner from "./modules/banner.vue";
 import LoginTrend from "./modules/login-trend.vue";
+import WorkspaceMetrics from "./modules/workspace-metrics.vue";
 
 defineOptions({ name: "Home", inheritAttrs: false });
 
@@ -137,9 +145,41 @@ const chatLink = computed(() => featuredLinks.value.find((link) => link.path ===
 const knowledgeLinks = computed(() =>
   featuredLinks.value.filter((link) => link.path !== "/ai/chat")
 );
-const managementLinks = computed(() =>
-  quickLinks.value.filter((link) => !featuredLinks.value.includes(link))
-);
+const knowledgeStats = ref<KnowledgeStats | null>(null);
+const aiUsage = ref<AiUsageSummary | null>(null);
+const pendingItems = computed(() => {
+  const items: { key: string; label: string; count: number | null; path: string }[] = [];
+  const documentPath = quickLinks.value.find((link) => link.path === "/ai/document")?.path;
+  const stats = knowledgeStats.value;
+  if (stats && documentPath) {
+    if (stats.failed_documents > 0) {
+      items.push({
+        key: "failed",
+        label: "文档解析失败",
+        count: stats.failed_documents,
+        path: documentPath,
+      });
+    }
+    if (stats.processing_documents > 0) {
+      items.push({
+        key: "processing",
+        label: "文档等待解析",
+        count: stats.processing_documents,
+        path: documentPath,
+      });
+    }
+  }
+  const usage = aiUsage.value;
+  if (usage && usage.daily_limit !== null && usage.remaining === 0 && chatLink.value) {
+    items.push({
+      key: "quota",
+      label: "今日 AI 调用额度已用尽",
+      count: null,
+      path: chatLink.value.path,
+    });
+  }
+  return items;
+});
 const healthState = ref<HealthState>("loading");
 const healthData = ref<HealthReadiness | null>(null);
 const healthLoading = ref(false);
@@ -203,8 +243,29 @@ async function loadHealthStatus(): Promise<void> {
   }
 }
 
-let healthRefreshTimer: number | undefined;
+const isKnowledgeStats = (value: unknown): value is KnowledgeStats => {
+  const stats = value as KnowledgeStats | null;
+  return (
+    !!stats &&
+    [
+      "knowledge_bases",
+      "documents",
+      "indexed_documents",
+      "processing_documents",
+      "failed_documents",
+    ].every((key) => Number.isFinite((stats as unknown as Record<string, unknown>)[key]))
+  );
+};
 
+/** 指标各自按权限降级：任一接口无权访问时只隐藏对应指标，不影响首页其余区域。 */
+async function loadWorkspaceStats(): Promise<void> {
+  const [stats, usage] = await Promise.allSettled([KnowledgeAPI.getStats(), AiChatAPI.getUsage()]);
+  const statsPayload = stats.status === "fulfilled" ? stats.value.data.data : null;
+  knowledgeStats.value = isKnowledgeStats(statsPayload) ? statsPayload : null;
+  aiUsage.value = usage.status === "fulfilled" ? usage.value.data.data : null;
+}
+
+let healthRefreshTimer: number | undefined;
 const startHealthTimer = () => {
   if (healthRefreshTimer === undefined) {
     healthRefreshTimer = window.setInterval(() => void loadHealthStatus(), HEALTH_REFRESH_INTERVAL);
@@ -220,12 +281,14 @@ const stopHealthTimer = () => {
 
 onMounted(() => {
   void loadHealthStatus();
+  void loadWorkspaceStats();
   startHealthTimer();
 });
 
 onActivated(() => {
   if (hasLoaded.value) {
     void loadHealthStatus();
+    void loadWorkspaceStats();
     startHealthTimer();
   }
 });
@@ -389,8 +452,8 @@ onUnmounted(stopHealthTimer);
   grid-template-columns: minmax(0, 1fr);
 }
 
-/* 快捷入口卡片 */
-.quick-links {
+/* 待处理面板 */
+.pending-panel {
   position: relative;
   min-width: 0;
   padding: 22px;
@@ -402,7 +465,7 @@ onUnmounted(stopHealthTimer);
   backdrop-filter: var(--fa-glass-blur);
 }
 
-.quick-links__header {
+.pending-panel__header {
   display: flex;
   flex-wrap: wrap;
   gap: 6px 12px;
@@ -411,7 +474,7 @@ onUnmounted(stopHealthTimer);
   margin-bottom: 14px;
 }
 
-.quick-links h2 {
+.pending-panel h2 {
   margin: 0;
   font-size: 17px;
   font-weight: 700;
@@ -419,21 +482,20 @@ onUnmounted(stopHealthTimer);
   letter-spacing: -0.01em;
 }
 
-.quick-links__header > span {
+.pending-panel__header > span {
   font-size: 11.5px;
   font-weight: 600;
   color: var(--fa-color-text-muted);
-  text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
-.quick-links nav {
+.pending-panel nav {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 6px;
 }
 
-.quick-links a {
+.pending-panel a {
   display: flex;
   gap: 12px;
   align-items: center;
@@ -450,39 +512,40 @@ onUnmounted(stopHealthTimer);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.quick-links a:hover {
+.pending-panel a:hover {
   color: var(--theme-color);
   background: var(--fa-glass-bg-hover, var(--fa-color-surface));
   border-color: color-mix(in srgb, var(--theme-color) 35%, var(--fa-glass-border));
-  box-shadow: 0 4px 12px -2px rgb(15 23 42 / 4%);
   transform: translateX(2px);
 }
 
-.quick-links a:focus-visible {
+.pending-panel a:focus-visible {
   outline: 2px solid var(--theme-color);
   outline-offset: 2px;
 }
 
-.quick-links__icon {
+.pending-panel__count {
   display: grid;
-  flex: 0 0 32px;
+  flex: 0 0 28px;
   place-items: center;
-  width: 32px;
-  height: 32px;
-  font-size: 16px;
-  color: var(--theme-color);
-  background: color-mix(in srgb, var(--theme-color) 10%, transparent);
+  width: 28px;
+  height: 28px;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--el-color-warning-dark-2);
+  background: color-mix(in srgb, var(--el-color-warning) 16%, transparent);
   border-radius: 8px;
 }
 
-.quick-links__arrow {
+.pending-panel__arrow {
   margin-left: auto;
   font-size: 16px;
   color: var(--fa-color-text-muted);
   transition: transform 0.2s ease;
 }
 
-.quick-links a:hover .quick-links__arrow {
+.pending-panel a:hover .pending-panel__arrow {
   color: var(--theme-color);
   transform: translateX(2px);
 }
@@ -503,11 +566,11 @@ onUnmounted(stopHealthTimer);
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .quick-links {
+  .pending-panel {
     order: -1;
   }
 
-  .quick-links nav {
+  .pending-panel nav {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -543,15 +606,15 @@ onUnmounted(stopHealthTimer);
     font-size: 12.5px;
   }
 
-  .quick-links {
+  .pending-panel {
     padding: 16px;
   }
 
-  .quick-links nav {
+  .pending-panel nav {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .quick-links a {
+  .pending-panel a {
     min-height: 48px;
     padding: 8px 10px;
   }
@@ -559,7 +622,7 @@ onUnmounted(stopHealthTimer);
 
 @media (prefers-reduced-motion: reduce) {
   .home-workspace a,
-  .quick-links__arrow,
+  .pending-panel__arrow,
   .knowledge-launch__link {
     transform: none !important;
     transition: none !important;

@@ -4,10 +4,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 
 from app.core.base_schema import AuthSchema
 from app.core.exceptions import CustomException
+from app.core.permission import Permission
 from app.plugin.module_ai.config import settings
 
 from .bm25_index import BM25KnowledgeIndex
@@ -26,6 +27,7 @@ from .schema import (
     KnowledgeChunkOutSchema,
     KnowledgeDocumentOutSchema,
     KnowledgeDocumentQueryParam,
+    KnowledgeStatsSchema,
     RetrievalTestSchema,
 )
 
@@ -73,6 +75,27 @@ class KnowledgeService:
             item["indexing_document_count"] = status_counts.get("pending", 0) + status_counts.get("indexing", 0)
             item["failed_document_count"] = status_counts.get("failed", 0)
         return result.model_dump()
+
+    async def get_stats(self) -> KnowledgeStatsSchema:
+        """统计当前账号可见的知识库与文档状态分布，供首页概览使用。"""
+        base_sql = select(func.count(KnowledgeBaseModel.id)).where(KnowledgeBaseModel.is_deleted == False)  # noqa: E712
+        base_sql = await Permission(model=KnowledgeBaseModel, auth=self.auth).filter_query(base_sql)
+        knowledge_bases = (await self.auth.db.execute(base_sql)).scalar_one() or 0
+
+        doc_sql = (
+            select(KnowledgeDocumentModel.index_status, func.count(KnowledgeDocumentModel.id))
+            .where(KnowledgeDocumentModel.is_deleted == False)  # noqa: E712
+            .group_by(KnowledgeDocumentModel.index_status)
+        )
+        doc_sql = await Permission(model=KnowledgeDocumentModel, auth=self.auth).filter_query(doc_sql)
+        counts = {status: int(total) for status, total in (await self.auth.db.execute(doc_sql)).all()}
+        return KnowledgeStatsSchema(
+            knowledge_bases=int(knowledge_bases),
+            documents=sum(counts.values()),
+            indexed_documents=counts.get("success", 0),
+            processing_documents=counts.get("pending", 0) + counts.get("indexing", 0),
+            failed_documents=counts.get("failed", 0),
+        )
 
     async def list_enabled_bases(self) -> list[KnowledgeBaseOutSchema]:
         objs = await KnowledgeBaseCRUD(self.auth).get_list(search={"is_enabled": True}, order_by=[{"id": "desc"}])

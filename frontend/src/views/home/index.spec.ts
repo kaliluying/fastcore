@@ -2,6 +2,8 @@ import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Home from "./index.vue";
 import HealthAPI from "@/api/module_common/health";
+import AiChatAPI from "@/api/module_ai/chat";
+import KnowledgeAPI from "@/api/module_ai/knowledge";
 import type { AppRouteRecord } from "@/types/router";
 
 const stores = vi.hoisted(() => ({
@@ -15,6 +17,8 @@ vi.mock("@utils", () => ({
   formatMenuTitle: (title: string) => title,
 }));
 vi.mock("@/api/module_common/health", () => ({ default: { getReadiness: vi.fn() } }));
+vi.mock("@/api/module_ai/chat", () => ({ default: { getUsage: vi.fn() } }));
+vi.mock("@/api/module_ai/knowledge", () => ({ default: { getStats: vi.fn() } }));
 vi.mock("./modules/login-trend.vue", () => ({
   default: { name: "LoginTrend", template: '<section data-test="login-trend" />' },
 }));
@@ -59,6 +63,8 @@ beforeEach(() => {
       },
     },
   } as Awaited<ReturnType<typeof HealthAPI.getReadiness>>);
+  vi.mocked(KnowledgeAPI.getStats).mockRejectedValue(new Error("no permission"));
+  vi.mocked(AiChatAPI.getUsage).mockRejectedValue(new Error("no permission"));
 });
 afterEach(() => wrapper?.unmount());
 
@@ -74,7 +80,7 @@ describe("首页工作入口", () => {
     await flushPromises();
     expect(page.find(".knowledge-launch__action").attributes("href")).toBe("/ai/chat");
     expect(page.findAll(".knowledge-launch__resources a")).toHaveLength(3);
-    expect(page.findAll(".quick-links a")).toHaveLength(8);
+    expect(page.find(".pending-panel").exists()).toBe(false);
     expect(page.findAll('a[href="/ai/knowledge"]')).toHaveLength(1);
     expect(page.find(".home-health--healthy").text()).toContain("基础服务正常");
   });
@@ -92,7 +98,7 @@ describe("首页工作入口", () => {
     const page = createPage();
     expect(page.find(".knowledge-launch").exists()).toBe(false);
     expect(page.find('[data-test="login-trend"]').exists()).toBe(false);
-    expect(page.findAll(".quick-links a")).toHaveLength(1);
+    expect(page.find(".pending-panel").exists()).toBe(false);
   });
 
   it("有登录日志权限才呈现统计，知识入口只有一项时仍可访问", () => {
@@ -102,6 +108,42 @@ describe("首页工作入口", () => {
     expect(page.find('[data-test="login-trend"]').exists()).toBe(true);
     expect(page.find(".knowledge-launch__action").exists()).toBe(false);
     expect(page.find(".knowledge-launch__resources a").attributes("href")).toBe("/ai/document");
+  });
+
+  it("按接口数据呈现业务指标，并在有待处理事项时显示待处理面板", async () => {
+    stores.menu.menuList = [route("/ai/chat", "AI 对话"), route("/ai/document", "文档管理")];
+    vi.mocked(KnowledgeAPI.getStats).mockResolvedValue({
+      data: {
+        data: {
+          knowledge_bases: 2,
+          documents: 12,
+          indexed_documents: 9,
+          processing_documents: 1,
+          failed_documents: 2,
+        },
+      },
+    } as Awaited<ReturnType<typeof KnowledgeAPI.getStats>>);
+    vi.mocked(AiChatAPI.getUsage).mockResolvedValue({
+      data: {
+        data: {
+          user_id: 1,
+          day: "2026-11-15",
+          timezone: "Asia/Shanghai",
+          calls: 7,
+          daily_limit: 20,
+          remaining: 13,
+        },
+      },
+    } as Awaited<ReturnType<typeof AiChatAPI.getUsage>>);
+    const page = createPage();
+    await flushPromises();
+    expect(page.findAll(".workspace-metric")).toHaveLength(4);
+    expect(page.find(".workspace-metrics").text()).toContain("剩余 13 / 20");
+    expect(page.findAll(".pending-panel a").map((link) => link.attributes("href"))).toEqual([
+      "/ai/document",
+      "/ai/document",
+    ]);
+    expect(page.find(".pending-panel").text()).toContain("文档解析失败");
   });
 
   it("没有可用权限时保留明确空态，状态请求失败后可以重试", async () => {

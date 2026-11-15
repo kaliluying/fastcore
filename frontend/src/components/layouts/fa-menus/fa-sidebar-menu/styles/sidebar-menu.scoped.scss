@@ -273,10 +273,27 @@
         transition: color 0.18s ease;
       }
     }
+  }
 
-    .menu-left-close .header-collapse-btn {
+  /* DOM 是 .menu-left-close > .header > .header-brand，不能嵌进 .header 里写。 */
+  .menu-left-close {
+    .header-collapse-btn {
       right: 50%;
       transform: translate(50%, -50%);
+    }
+
+    .header-brand {
+      visibility: hidden;
+      gap: 0;
+      width: 0;
+      min-width: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .header-brand__text {
+      width: 0;
+      opacity: 0;
     }
   }
 

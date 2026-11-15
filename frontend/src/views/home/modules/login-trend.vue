@@ -56,6 +56,7 @@
             :show-axis-line="false"
             :show-split-line="true"
             :smooth="false"
+            y-axis-integer
           />
         </div>
         <div v-else-if="!hasActivity" class="trend-state" role="status">
@@ -138,6 +139,8 @@ const chartSeries = computed<LineDataItem[]>(() => [
     name: "独立用户",
     data: trendItems.value.map((item) => item.unique_users),
     lineWidth: 2,
+    // 独立用户不超过登录次数，两者数值相同时虚线才不会被实线覆盖
+    dashed: true,
   },
 ]);
 const chartColors = computed(() => [

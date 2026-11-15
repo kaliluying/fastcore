@@ -26,6 +26,16 @@ class KnowledgeBaseOutSchema(KnowledgeBaseCreateSchema, BaseSchema, UserBySchema
     failed_document_count: int = 0
 
 
+class KnowledgeStatsSchema(BaseModel):
+    """首页概览使用的知识库与文档状态统计。"""
+
+    knowledge_bases: int = 0
+    documents: int = 0
+    indexed_documents: int = 0
+    processing_documents: int = 0
+    failed_documents: int = 0
+
+
 class KnowledgeDocumentQueryParam(BaseQueryParam):
     knowledge_base_id: int | None = None
     file_name: str | None = None

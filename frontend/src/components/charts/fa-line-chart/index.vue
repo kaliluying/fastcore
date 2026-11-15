@@ -42,6 +42,7 @@ const props = withDefaults(defineProps<LineChartProps>(), {
   showTooltip: true,
   showLegend: false,
   legendPosition: "bottom",
+  yAxisInteger: false,
 });
 
 // 动画状态管理
@@ -163,6 +164,7 @@ const createSeriesItem = (config: {
   symbolSize?: number;
   lineWidth?: number;
   areaStyle?: any;
+  dashed?: boolean;
 }) => {
   return {
     name: config.name,
@@ -175,6 +177,7 @@ const createSeriesItem = (config: {
     lineStyle: {
       width: config.lineWidth ?? props.lineWidth,
       color: config.color,
+      type: config.dashed ? ("dashed" as const) : ("solid" as const),
     },
     areaStyle: config.areaStyle,
     emphasis: {
@@ -210,6 +213,7 @@ const generateChartOptions = (isInitial = false): EChartsOption => {
       type: "value",
       min: 0,
       max: maxValue.value,
+      minInterval: props.yAxisInteger ? 1 : undefined,
       axisLabel: getAxisLabelStyle(props.showAxisLabel),
       axisLine: getAxisLineStyle(props.showAxisLine),
       splitLine: getSplitLineStyle(props.showSplitLine),
@@ -236,6 +240,7 @@ const generateChartOptions = (isInitial = false): EChartsOption => {
         symbol: item.symbol,
         lineWidth: item.lineWidth,
         areaStyle,
+        dashed: item.dashed,
       });
     });
   } else {

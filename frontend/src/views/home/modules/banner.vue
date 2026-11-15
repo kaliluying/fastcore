@@ -3,7 +3,7 @@
     <div class="header-titles">
       <div class="status-badge" aria-hidden="true">
         <span class="badge-dot" />
-        <span>FASTCORE NEXT-GEN WORKSPACE</span>
+        <span>AI 知识管理</span>
       </div>
       <h1>工作台</h1>
       <p>
@@ -80,7 +80,7 @@ const healthLabels = {
   font-size: 11px;
   font-weight: 700;
   color: var(--theme-color);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.02em;
   background: color-mix(in srgb, var(--theme-color) 10%, transparent);
   border: 1px solid color-mix(in srgb, var(--theme-color) 25%, transparent);
   border-radius: 9999px;

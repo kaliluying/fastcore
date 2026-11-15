@@ -113,6 +113,8 @@ export interface LineDataItem {
   };
   /** 是否平滑曲线 */
   smooth?: boolean;
+  /** 是否使用虚线，用于与数值相同的序列重叠时仍可辨识 */
+  dashed?: boolean;
   /** 数据点符号 */
   symbol?: SymbolType;
   /** 数据点大小 */
@@ -137,4 +139,6 @@ export interface LineChartProps extends BaseChartProps, AxisDisplayProps, Intera
   symbolSize?: number;
   /** 多数据动画延迟间隔（毫秒） */
   animationDelay?: number;
+  /** Y 轴刻度是否取整，适用于计数类数据 */
+  yAxisInteger?: boolean;
 }
